@@ -1,21 +1,8 @@
-# Identity service
-This microservice is responsible for:
-* Onboarding users
-* Roles and permissions
-* Authentication
+## Viettel Digital Talent 2025 mini-project
+# Mô tả
+- Dự án này là một ứng dụng web đơn giản được xây dựng bằng Java Spring Boot 3.
+- Nó là một Online Course Management System với các chức năng cơ bản.
 
-## Tech stack
-* Build tool: maven >= 3.9.5
-* Java: 21
-* Framework: Spring boot 3.2.x
-* DBMS: MySQL
-
-## Prerequisites
-* Java SDK 21
-* A MySQL server
-
-## Start application
-`mvn spring-boot:run`
-
-## Build application
-`mvn clean package`
+# Yêu cầu
+- Java 21
+- Spring Boot 3
