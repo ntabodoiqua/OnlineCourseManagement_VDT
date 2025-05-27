@@ -37,6 +37,7 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
 
+    // Service tạo người dùng mới
     public UserResponse createUser(UserCreationRequest request){
         // Kiểm tra trùng email
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -47,7 +48,12 @@ public class UserService {
         if (userRepository.existsByPhone(request.getPhone())) {
             throw new AppException(ErrorCode.PHONE_EXISTED);
         }
+        // Kiểm tra trùng username
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new AppException(ErrorCode.USER_EXISTED);
+        }
 
+        // Mã hóa mật khẩu
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
@@ -72,16 +78,24 @@ public class UserService {
         return userMapper.toUserResponse(user);
     }
 
+    // Service lấy thông tin người dùng hiện tại
     public UserResponse getMyInfo(){
+        // Lấy securityContext từ SecurityContextHolder
         var context = SecurityContextHolder.getContext();
+
+        // Lấy tên người dùng từ authentication
         String name = context.getAuthentication().getName();
 
+        // Kiểm tra xem người dùng có tồn tại không
         User user = userRepository.findByUsername(name).orElseThrow(
                 () -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         return userMapper.toUserResponse(user);
     }
 
+    // Service cập nhật thông tin người dùng
+    // Kiểm tra role Admin hoặc người dùng hiện tại mới được phép cập nhật
+    @PostAuthorize("returnObject.username == authentication.name or hasRole('ADMIN')")
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -92,14 +106,21 @@ public class UserService {
         var roles = roleRepository.findAllById(request.getRoles());
         user.setRoles(new HashSet<>(roles));
 
+        // Thiết lập thời gian cập nhật
+        user.setUpdatedAt(LocalDateTime.now());
+
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    // Service xóa người dùng
+    // Kiểm tra role Admin hoặc người dùng hiện tại mới được phép xóa
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     public void deleteUser(String userId){
         userRepository.deleteById(userId);
     }
 
-    // hasAuthority('ROLE_ADMIN')
+    // Service lấy danh sách người dùng
+    // Kiểm tra role Admin mới được phép truy cập
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getUsers(){
         log.info("In method get Users");
@@ -107,10 +128,39 @@ public class UserService {
                 .map(userMapper::toUserResponse).toList();
     }
 
-    @PostAuthorize("returnObject.username == authentication.name")
+    // Service lấy thông tin người dùng theo ID
+    // Kiểm tra role Admin hoặc người dùng hiện tại mới được phép truy cập
+    @PostAuthorize("returnObject.username == authentication.name or hasRole('ADMIN')")
     public UserResponse getUser(String id){
         log.info("In method get user by Id");
         return userMapper.toUserResponse(userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
     }
+
+    // Service người dùng đổi mật khẩu
+    public String changeMyPassword(String oldPassword, String newPassword) {
+        String username = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Kiểm tra mật khẩu cũ có đúng không
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new AppException(ErrorCode.OLD_PASSWORD_FALSE);
+        }
+
+        // Kiểm tra mật khẩu mới có khác mật khẩu cũ không
+        if (oldPassword.equals(newPassword)) {
+            throw new AppException(ErrorCode.NEW_PASSWORD_SAME_AS_OLD);
+        }
+        // Mã hóa mật khẩu mới
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        // Ghi log
+        log.info("User {} changed password successfully", username);
+        return "Password changed successfully";
+    }
+
 }

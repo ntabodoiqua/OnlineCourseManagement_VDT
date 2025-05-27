@@ -25,7 +25,8 @@ public enum ErrorCode {
     // Lỗi xác thực
     UNAUTHENTICATED(1014, "Unauthenticated", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1015, "You do not have permission", HttpStatus.FORBIDDEN),
-
+    OLD_PASSWORD_FALSE(1016, "Old password is false", HttpStatus.BAD_REQUEST),
+    NEW_PASSWORD_SAME_AS_OLD(1017, "New password must be different from old password", HttpStatus.BAD_REQUEST)
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

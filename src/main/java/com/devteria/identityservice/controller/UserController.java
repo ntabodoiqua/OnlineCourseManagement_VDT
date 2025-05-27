@@ -1,6 +1,7 @@
 package com.devteria.identityservice.controller;
 
 import com.devteria.identityservice.dto.request.ApiResponse;
+import com.devteria.identityservice.dto.request.user.UserChangePasswordRequest;
 import com.devteria.identityservice.dto.request.user.UserCreationRequest;
 import com.devteria.identityservice.dto.request.user.UserUpdateRequest;
 import com.devteria.identityservice.dto.response.user.UserResponse;
@@ -23,6 +24,7 @@ import java.util.List;
 public class UserController {
     UserService userService;
 
+    // Controller tạo người dùng mới
     @PostMapping
     ApiResponse<UserResponse> createUser(@RequestBody @Valid UserCreationRequest request){
         return ApiResponse.<UserResponse>builder()
@@ -30,6 +32,7 @@ public class UserController {
                 .build();
     }
 
+    // Controller lấy danh sách người dùng
     @GetMapping
     ApiResponse<List<UserResponse>> getUsers(){
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -42,6 +45,7 @@ public class UserController {
                 .build();
     }
 
+    // Controller lấy thông tin người dùng theo ID
     @GetMapping("/{userId}")
     ApiResponse<UserResponse> getUser(@PathVariable("userId") String userId){
         return ApiResponse.<UserResponse>builder()
@@ -49,6 +53,7 @@ public class UserController {
                 .build();
     }
 
+    // Controller lấy thông tin người dùng hiện tại
     @GetMapping("/myInfo")
     ApiResponse<UserResponse> getMyInfo(){
         return ApiResponse.<UserResponse>builder()
@@ -56,6 +61,7 @@ public class UserController {
                 .build();
     }
 
+    // Controller xóa người dùng theo ID
     @DeleteMapping("/{userId}")
     ApiResponse<String> deleteUser(@PathVariable String userId){
         userService.deleteUser(userId);
@@ -64,10 +70,20 @@ public class UserController {
                 .build();
     }
 
+    // Controller cập nhật thông tin người dùng theo ID
     @PutMapping("/{userId}")
     ApiResponse<UserResponse> updateUser(@PathVariable String userId, @RequestBody UserUpdateRequest request){
         return ApiResponse.<UserResponse>builder()
                 .result(userService.updateUser(userId, request))
+                .build();
+    }
+
+    // Controller tự người dùng cập nhật mật khẩu
+    @PutMapping("/change-password")
+    ApiResponse<String> changeMyPassword(@RequestBody @Valid UserChangePasswordRequest request) {
+        var result = userService.changeMyPassword(request.getOldPassword(), request.getNewPassword());
+        return ApiResponse.<String>builder()
+                .result(result)
                 .build();
     }
 }
