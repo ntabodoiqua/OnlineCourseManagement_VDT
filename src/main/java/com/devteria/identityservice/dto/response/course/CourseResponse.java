@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -21,6 +22,9 @@ public class CourseResponse {
     int totalLessons;
     LocalDate startDate;
     LocalDate endDate;
+
+    LocalDateTime createdAt;
+    LocalDateTime updatedAt;
 
     // Thông tin về giảng viên
     UserResponse instructor;

@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface CourseRepository extends JpaRepository<Course, String> {
     List<Course> findByInstructor_Id(String instructorId);
     List<Course> findByIsActiveTrue();
+    boolean existsByTitleIgnoreCase(String title);
 }

@@ -17,6 +17,7 @@ public class CourseUpdateRequest {
     String thumbnailUrl;
     LocalDate startDate;
     LocalDate endDate;
+    String categoryName;
     // Chỉnh sửa trạng thái khóa học
     Boolean isActive;
 }

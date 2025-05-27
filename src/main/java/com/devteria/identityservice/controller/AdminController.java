@@ -88,4 +88,12 @@ public class AdminController {
                 .result(adminService.enableUser(userId))
                 .build();
     }
+
+    // Controller disable người dùng
+    @PutMapping("/{userId}/disable")
+    ApiResponse<String> disableUser(@PathVariable String userId) {
+        return ApiResponse.<String>builder()
+                .result(adminService.disableUser(userId))
+                .build();
+    }
 }

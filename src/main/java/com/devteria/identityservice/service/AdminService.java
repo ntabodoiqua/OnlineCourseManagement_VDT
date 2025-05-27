@@ -81,7 +81,7 @@ public class AdminService {
 
     // Service cập nhật thông tin người dùng
     // Kiểm tra role Admin mới được phép cập nhật
-    @PostAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -127,5 +127,22 @@ public class AdminService {
 
         log.info("Admin enabled user {}", user.getUsername());
         return "User enabled successfully: " + user.getUsername();
+    }
+    // Service disable tài khoản người dùng
+    @PreAuthorize("hasRole('ADMIN')")
+    public String disableUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Kiểm tra xem người dùng đã bị vô hiệu hóa chưa
+        if (!user.isEnabled()) {
+            throw new AppException(ErrorCode.USER_ALREADY_DISABLED);
+        }
+        user.setEnabled(false);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        log.info("Admin disabled user {}", user.getUsername());
+        return "User disabled successfully: " + user.getUsername();
     }
 }

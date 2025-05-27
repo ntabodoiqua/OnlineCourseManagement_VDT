@@ -18,4 +18,5 @@ public class CourseCreationRequest {
     LocalDate startDate;
     LocalDate endDate;
     String instructorId;
+    String categoryName;
 }
