@@ -93,50 +93,6 @@ public class UserService {
         return userMapper.toUserResponse(user);
     }
 
-    // Service cập nhật thông tin người dùng
-    // Kiểm tra role Admin hoặc người dùng hiện tại mới được phép cập nhật
-    @PostAuthorize("returnObject.username == authentication.name or hasRole('ADMIN')")
-    public UserResponse updateUser(String userId, UserUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        userMapper.updateUser(user, request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-
-        var roles = roleRepository.findAllById(request.getRoles());
-        user.setRoles(new HashSet<>(roles));
-
-        // Thiết lập thời gian cập nhật
-        user.setUpdatedAt(LocalDateTime.now());
-
-        return userMapper.toUserResponse(userRepository.save(user));
-    }
-
-    // Service xóa người dùng
-    // Kiểm tra role Admin hoặc người dùng hiện tại mới được phép xóa
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
-    public void deleteUser(String userId){
-        userRepository.deleteById(userId);
-    }
-
-    // Service lấy danh sách người dùng
-    // Kiểm tra role Admin mới được phép truy cập
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<UserResponse> getUsers(){
-        log.info("In method get Users");
-        return userRepository.findAll().stream()
-                .map(userMapper::toUserResponse).toList();
-    }
-
-    // Service lấy thông tin người dùng theo ID
-    // Kiểm tra role Admin hoặc người dùng hiện tại mới được phép truy cập
-    @PostAuthorize("returnObject.username == authentication.name or hasRole('ADMIN')")
-    public UserResponse getUser(String id){
-        log.info("In method get user by Id");
-        return userMapper.toUserResponse(userRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
-    }
-
     // Service người dùng đổi mật khẩu
     public String changeMyPassword(String oldPassword, String newPassword) {
         String username = SecurityContextHolder.getContext()

@@ -21,6 +21,7 @@ public enum ErrorCode {
     INVALID_PHONE(1010, "Phone number is invalid", HttpStatus.BAD_REQUEST),
     EMAIL_EXISTED(1011, "Email existed", HttpStatus.BAD_REQUEST),
     PHONE_EXISTED(1013, "Phone number existed", HttpStatus.BAD_REQUEST),
+    USER_ALREADY_ENABLED(1012, "User is already enabled", HttpStatus.BAD_REQUEST),
 
     // Lỗi xác thực
     UNAUTHENTICATED(1014, "Unauthenticated", HttpStatus.UNAUTHORIZED),
@@ -35,7 +36,7 @@ public enum ErrorCode {
         this.statusCode = statusCode;
     }
 
-    private int code;
-    private String message;
-    private HttpStatusCode statusCode;
+    private final int code;
+    private final String message;
+    private final HttpStatusCode statusCode;
 }
