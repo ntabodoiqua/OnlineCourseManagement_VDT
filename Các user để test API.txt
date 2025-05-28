@@ -3,9 +3,12 @@ Các user để test API
 STUDENT:
 	anhnta2004
 	Theanh@3007
-INSTRUCTOR
+INSTRUCTOR 1
 	nguyenphuc
 	phuc123456789
+INSTRUCTOR 2
+    nguyenvan
+    vann123456789
 ADMIN
 	admin
 	admin

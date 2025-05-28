@@ -21,6 +21,7 @@ import java.util.List;
 public class CategoryController {
     CategoryService categoryService;
 
+    // Lấy danh sách tất cả các danh mục
     @GetMapping("/get-categories")
     public ApiResponse<List<CategoryResponse>> getCategories() {
         log.info("Fetching all categories");
@@ -31,6 +32,7 @@ public class CategoryController {
                 .build();
     }
 
+    // Tạo danh mục mới
     @PostMapping()
     public ApiResponse<CategoryResponse> createCategory(@RequestBody @Valid CategoryRequest categoryRequest) {
         log.info("Creating new category: {}", categoryRequest.getName());
@@ -40,4 +42,51 @@ public class CategoryController {
                 .result(createdCategory)
                 .build();
     }
+
+    // Cập nhật danh mục theo ID
+    @PutMapping("/{categoryId}")
+    public ApiResponse<CategoryResponse> updateCategory(@PathVariable String categoryId,
+                                                        @RequestBody @Valid CategoryRequest categoryRequest) {
+        log.info("Updating category with ID: {}", categoryId);
+        CategoryResponse updatedCategory = categoryService.updateCategory(categoryId, categoryRequest);
+        return ApiResponse.<CategoryResponse>builder()
+                .message("Category updated successfully")
+                .result(updatedCategory)
+                .build();
+    }
+
+    // Xóa danh mục theo ID
+    @DeleteMapping("/{categoryId}")
+    public ApiResponse<String> deleteCategory(@PathVariable String categoryId) {
+        log.info("Deleting category with ID: {}", categoryId);
+        categoryService.deleteCategory(categoryId);
+        return ApiResponse.<String>builder()
+                .message("Category deleted successfully")
+                .result("Category with ID " + categoryId + " has been deleted.")
+                .build();
+    }
+
+    // Lấy thông tin danh mục theo ID
+    @GetMapping("/{categoryId}")
+    public ApiResponse<CategoryResponse> getCategoryById(@PathVariable String categoryId) {
+        log.info("Fetching category with ID: {}", categoryId);
+        CategoryResponse category = categoryService.getCategoryById(categoryId);
+        return ApiResponse.<CategoryResponse>builder()
+                .message("Category fetched successfully")
+                .result(category)
+                .build();
+    }
+
+    // Tìm kiếm danh mục theo tên
+    @GetMapping("/search")
+    public ApiResponse<List<CategoryResponse>> searchCategories(@RequestParam String name) {
+        log.info("Searching categories with name: {}", name);
+        List<CategoryResponse> categories = categoryService.findCategoriesByName(name);
+        return ApiResponse.<List<CategoryResponse>>builder()
+                .message("Categories fetched successfully")
+                .result(categories)
+                .build();
+    }
+
+
 }

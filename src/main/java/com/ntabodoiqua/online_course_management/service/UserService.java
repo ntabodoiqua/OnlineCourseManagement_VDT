@@ -4,20 +4,25 @@ import com.ntabodoiqua.online_course_management.constant.PredefinedRole;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserCreationRequest;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
 import com.ntabodoiqua.online_course_management.entity.Role;
+import com.ntabodoiqua.online_course_management.entity.UploadedFile;
 import com.ntabodoiqua.online_course_management.entity.User;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.UserMapper;
 import com.ntabodoiqua.online_course_management.repository.RoleRepository;
+import com.ntabodoiqua.online_course_management.repository.UploadedFileRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.service.file.FileStorageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -28,12 +33,15 @@ import java.util.Set;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class UserService {
+    UploadedFileRepository uploadedFileRepository;
     UserRepository userRepository;
     RoleRepository roleRepository;
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
+    FileStorageService fileStorageService;
 
     // Service tạo người dùng mới
+
     public UserResponse createUser(UserCreationRequest request){
         // Kiểm tra trùng email
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -75,6 +83,7 @@ public class UserService {
     }
 
     // Service lấy thông tin người dùng hiện tại
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
     public UserResponse getMyInfo(){
         // Lấy securityContext từ SecurityContextHolder
         var context = SecurityContextHolder.getContext();
@@ -90,6 +99,7 @@ public class UserService {
     }
 
     // Service người dùng đổi mật khẩu
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
     public String changeMyPassword(String oldPassword, String newPassword) {
         String username = SecurityContextHolder.getContext()
                 .getAuthentication().getName();
@@ -113,6 +123,49 @@ public class UserService {
         // Ghi log
         log.info("User {} changed password successfully", username);
         return "Password changed successfully";
+    }
+
+    // Service người dùng cập nhật ảnh đại diện
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public String setAvatar(MultipartFile file) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new AppException(ErrorCode.INVALID_IMAGE_TYPE);
+        }
+
+        String fileName = fileStorageService.storeFile(file, true);
+        String avatarUrl = "/files/public/" + fileName;
+
+        user.setAvatarUrl(avatarUrl);
+        userRepository.save(user);
+
+        return avatarUrl;
+    }
+
+    // Service người dùng cập nhật ảnh đại diện từ file đã tải lên
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public String setAvatarFromUploadedFile(String fileName) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        UploadedFile uploadedFile = uploadedFileRepository.findByFileName(fileName)
+                .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
+
+        // Chỉ cho phép dùng ảnh và phải là file public
+        if (!uploadedFile.getContentType().startsWith("image/") || !uploadedFile.isPublic()) {
+            throw new AppException(ErrorCode.INVALID_IMAGE_TYPE);
+        }
+
+        String avatarUrl = "/files/public/" + uploadedFile.getFileName();
+        user.setAvatarUrl(avatarUrl);
+        userRepository.save(user);
+
+        return avatarUrl;
     }
 
 }

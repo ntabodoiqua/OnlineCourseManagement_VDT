@@ -61,21 +61,35 @@ public class CategoryService {
 
     // Service để cập nhật danh mục khóa học
     // Chỉ cho phép người dùng có vai trò INSTRUCTOR hoặc ADMIN mới có thể cập nhật danh mục
-    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
     public CategoryResponse updateCategory(String categoryId, CategoryRequest request) {
         // Tìm danh mục theo ID
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
 
-        // Cập nhật thông tin danh mục
-        category.setName(request.getName());
-        if (categoryRepository.existsByName(request.getName()) &&
-                !category.getName().equalsIgnoreCase(request.getName())) {
+        // Lấy thông tin người dùng hiện tại
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // Kiểm tra vai trò ADMIN
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        // Kiểm tra nếu không phải admin và cũng không phải người tạo
+        boolean isOwner = category.getCreatedBy().getUsername().equals(currentUsername);
+        if (!isAdmin && !isOwner) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Kiểm tra trùng tên với danh mục khác
+        if (!category.getName().equalsIgnoreCase(request.getName())
+                && categoryRepository.existsByName(request.getName())) {
             throw new AppException(ErrorCode.CATEGORY_EXISTED);
         }
+
+        // Cập nhật thông tin
+        category.setName(request.getName());
         category.setDescription(request.getDescription());
 
-        // Lưu danh mục đã cập nhật vào cơ sở dữ liệu
         categoryRepository.save(category);
 
         return categoryMapper.toCategoryResponse(category);
@@ -85,15 +99,21 @@ public class CategoryService {
     // Chỉ cho phép người dùng có vai trò INSTRUCTOR hoặc ADMIN mới có thể xóa danh mục
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
     public String deleteCategory(String categoryId) {
-        // Tìm danh mục theo ID
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
 
-        String name = category.getName();
-        // Xóa danh mục khỏi cơ sở dữ liệu
+        // Kiểm tra nếu là instructor thì chỉ được xóa category mình tạo ra
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !category.getCreatedBy().getUsername().equals(currentUsername)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
         categoryRepository.delete(category);
-        log.info("Category with name {} has been deleted", name);
-        return "Category '" + name + "' has been deleted successfully.";
+        log.info("Category with name {} has been deleted", category.getName());
+        return "Category '" + category.getName() + "' has been deleted successfully.";
     }
 
     // Service để lấy danh sách tất cả danh mục khóa học
@@ -127,5 +147,6 @@ public class CategoryService {
                 .map(categoryMapper::toCategoryResponse)
                 .toList();
     }
+
 
 }
