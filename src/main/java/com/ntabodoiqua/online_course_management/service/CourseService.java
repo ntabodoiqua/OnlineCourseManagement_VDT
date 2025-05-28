@@ -12,6 +12,7 @@ import com.ntabodoiqua.online_course_management.mapper.CourseMapper;
 import com.ntabodoiqua.online_course_management.repository.CategoryRepository;
 import com.ntabodoiqua.online_course_management.repository.CourseRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.service.file.FileStorageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -41,10 +43,11 @@ public class CourseService {
     CategoryRepository categoryRepository;
     UserRepository userRepository;
     CourseMapper courseMapper;
+    FileStorageService fileStorageService;
 
     // Service tạo khóa học mới
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
-    public CourseResponse createCourse(CourseCreationRequest request) {
+    public CourseResponse createCourse(CourseCreationRequest request, MultipartFile thumbnail) {
         // Kiểm tra xem danh mục có tồn tại không
         var category = categoryRepository.findFirstByNameContainingIgnoreCase(request.getCategoryName())
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
@@ -57,9 +60,12 @@ public class CourseService {
         User instructor = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
+        // Lưu thumbnail vào hệ thống file
+        String fileName = fileStorageService.storeFile(thumbnail, true);
         Course course = courseMapper.toCourse(request);
         course.setInstructor(instructor);
         course.setCategory(category);
+        course.setThumbnailUrl("/uploads/public/" + fileName);
         course.setCreatedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
 
