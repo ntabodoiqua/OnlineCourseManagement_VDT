@@ -40,6 +40,8 @@ public enum ErrorCode {
     FILE_CANNOT_STORED(1024, "File cannot be stored", HttpStatus.INTERNAL_SERVER_ERROR),
     FILE_NOT_FOUND(1025, "File not found", HttpStatus.NOT_FOUND),
     INVALID_IMAGE_TYPE(1026, "Invalid image type", HttpStatus.BAD_REQUEST)
+
+
     ;
 
 

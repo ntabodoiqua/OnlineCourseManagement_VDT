@@ -1,5 +1,6 @@
 package com.ntabodoiqua.online_course_management.service;
 
+import com.ntabodoiqua.online_course_management.dto.request.user.UserFilterRequest;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserSearchRequest;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserUpdateRequest;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
@@ -9,10 +10,13 @@ import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.UserMapper;
 import com.ntabodoiqua.online_course_management.repository.RoleRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.specification.UserSpecification;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,10 +54,9 @@ public class AdminService {
     // Service lấy danh sách người dùng
     // Kiểm tra role Admin mới được phép truy cập
     @PreAuthorize("hasRole('ADMIN')")
-    public List<UserResponse> getUsers(){
-        log.info("In method get Users");
-        return userRepository.findAll().stream()
-                .map(userMapper::toUserResponse).toList();
+    public Page<UserResponse> getUsers(Pageable pageable) {
+        log.info("Fetching all users with pagination");
+        return userRepository.findAll(pageable).map(userMapper::toUserResponse);
     }
 
     // Service lấy thông tin người dùng theo ID
@@ -93,17 +96,11 @@ public class AdminService {
 
     // Service tìm kiếm người dùng theo tên, username
     @PreAuthorize("hasRole('ADMIN')")
-    public List<UserResponse> searchUsers(UserSearchRequest request) {
-        log.info("Searching users with username: {}, firstName: {}, lastName: {}", request.getUsername(), request.getFirstName(), request.getLastName());
-        return userRepository
-                .findByUsernameContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
-                        request.getUsername(), request.getFirstName(), request.getLastName()
-                )
-                .stream()
-                .map(userMapper::toUserResponse)
-                .toList();
+    public Page<UserResponse> searchUsers(UserFilterRequest filter, Pageable pageable) {
+        log.info("Filtering users with: {}", filter);
+        return userRepository.findAll(UserSpecification.withFilter(filter), pageable)
+                .map(userMapper::toUserResponse);
     }
-
     // Service enable tài khoản người dùng
     @PreAuthorize("hasRole('ADMIN')")
     public String enableUser(String userId) {

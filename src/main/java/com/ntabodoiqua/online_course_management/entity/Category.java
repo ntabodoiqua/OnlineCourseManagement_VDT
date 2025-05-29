@@ -3,6 +3,9 @@ package com.ntabodoiqua.online_course_management.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -22,6 +25,10 @@ public class Category {
     @Column(length = 500)
     String description; // Mô tả ngắn gọn về category
 
+    // Thời gian tạo
+    @CreationTimestamp
+    @Column(updatable = false)
+    LocalDateTime createdAt;
     // Instructor tạo category
     @ManyToOne
     User createdBy;

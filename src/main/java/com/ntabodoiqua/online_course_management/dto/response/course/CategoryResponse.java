@@ -3,6 +3,8 @@ package com.ntabodoiqua.online_course_management.dto.response.course;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,4 +15,5 @@ public class CategoryResponse {
     String name;
     String description;
     String createdByUsername;
+    LocalDateTime createdAt;
 }

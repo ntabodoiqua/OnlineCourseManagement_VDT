@@ -2,6 +2,7 @@ package com.ntabodoiqua.online_course_management.controller;
 
 import com.ntabodoiqua.online_course_management.dto.request.ApiResponse;
 import com.ntabodoiqua.online_course_management.dto.request.course.CategoryRequest;
+import com.ntabodoiqua.online_course_management.dto.request.course.CategorySearchRequest;
 import com.ntabodoiqua.online_course_management.dto.response.course.CategoryResponse;
 import com.ntabodoiqua.online_course_management.service.CategoryService;
 import jakarta.validation.Valid;
@@ -9,8 +10,11 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -22,11 +26,42 @@ public class CategoryController {
     CategoryService categoryService;
 
     // Lấy danh sách tất cả các danh mục
-    @GetMapping("/get-categories")
-    public ApiResponse<List<CategoryResponse>> getCategories() {
-        log.info("Fetching all categories");
-        List<CategoryResponse> categories = categoryService.getAllCategories();
-        return ApiResponse.<List<CategoryResponse>>builder()
+//    @GetMapping()
+//    public ApiResponse<List<CategoryResponse>> getCategories() {
+//        log.info("Fetching all categories");
+//        List<CategoryResponse> categories = categoryService.getAllCategories();
+//        return ApiResponse.<List<CategoryResponse>>builder()
+//                .message("Categories fetched successfully")
+//                .result(categories)
+//                .build();
+//    }
+    // Lấy danh sách danh mục với các tham số tìm kiếm
+    @GetMapping
+    public ApiResponse<Page<CategoryResponse>> getCategories(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String createdBy,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction
+    ) {
+        CategorySearchRequest request = CategorySearchRequest.builder()
+                .name(name)
+                .description(description)
+                .createdBy(createdBy)
+                .from(from)
+                .to(to)
+                .page(page)
+                .size(size)
+                .sortBy(sortBy)
+                .direction(direction)
+                .build();
+
+        Page<CategoryResponse> categories = categoryService.searchCategories(request);
+        return ApiResponse.<Page<CategoryResponse>>builder()
                 .message("Categories fetched successfully")
                 .result(categories)
                 .build();
@@ -77,16 +112,6 @@ public class CategoryController {
                 .build();
     }
 
-    // Tìm kiếm danh mục theo tên
-    @GetMapping("/search")
-    public ApiResponse<List<CategoryResponse>> searchCategories(@RequestParam String name) {
-        log.info("Searching categories with name: {}", name);
-        List<CategoryResponse> categories = categoryService.findCategoriesByName(name);
-        return ApiResponse.<List<CategoryResponse>>builder()
-                .message("Categories fetched successfully")
-                .result(categories)
-                .build();
-    }
 
 
 }

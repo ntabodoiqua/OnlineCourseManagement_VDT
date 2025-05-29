@@ -46,4 +46,6 @@ public class Course {
     @ManyToOne
     @JoinColumn(name = "category_id")
     Category category; // Danh mục của khóa học
+
+    boolean requiresApproval;
 }

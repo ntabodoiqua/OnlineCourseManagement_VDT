@@ -1,6 +1,7 @@
 package com.ntabodoiqua.online_course_management.service;
 
 import com.ntabodoiqua.online_course_management.dto.request.course.CategoryRequest;
+import com.ntabodoiqua.online_course_management.dto.request.course.CategorySearchRequest;
 import com.ntabodoiqua.online_course_management.dto.response.course.CategoryResponse;
 import com.ntabodoiqua.online_course_management.entity.Category;
 import com.ntabodoiqua.online_course_management.entity.User;
@@ -13,10 +14,16 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -51,6 +58,7 @@ public class CategoryService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .createdBy(instructor)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         // Lưu danh mục vào cơ sở dữ liệu
@@ -134,18 +142,29 @@ public class CategoryService {
         return categoryMapper.toCategoryResponse(category);
     }
 
-    // Service tìm danh mục khóa học theo tên
-    public List<CategoryResponse> findCategoriesByName(String name) {
-        // Tìm danh mục theo tên
-        List<Category> categories = categoryRepository.findByNameContainingIgnoreCase(name);
+    // Service để tìm kiếm danh mục khóa học theo các tiêu chí
+    public Page<CategoryResponse> searchCategories(CategorySearchRequest request) {
+        Sort sort = Sort.by(Sort.Direction.fromString(request.getDirection()), request.getSortBy());
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
 
-        if (categories.isEmpty()) {
-            throw new AppException(ErrorCode.CATEGORY_NOT_EXISTED);
-        }
+        Specification<Category> spec = Specification.where(null);
 
-        return categories.stream()
-                .map(categoryMapper::toCategoryResponse)
-                .toList();
+        if (request.getName() != null)
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("name")), "%" + request.getName().toLowerCase() + "%"));
+
+        if (request.getDescription() != null)
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("description")), "%" + request.getDescription().toLowerCase() + "%"));
+
+        if (request.getCreatedBy() != null)
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("createdBy").get("username")), "%" + request.getCreatedBy().toLowerCase() + "%"));
+
+        if (request.getFrom() != null && request.getTo() != null)
+            spec = spec.and((root, query, cb) -> cb.between(root.get("createdAt"),
+                    request.getFrom().atStartOfDay(),
+                    request.getTo().atTime(23, 59, 59)));
+
+        Page<Category> resultPage = categoryRepository.findAll(spec, pageable);
+        return resultPage.map(categoryMapper::toCategoryResponse);
     }
 
 

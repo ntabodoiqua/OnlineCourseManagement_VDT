@@ -2,6 +2,7 @@ package com.ntabodoiqua.online_course_management.controller;
 
 import com.ntabodoiqua.online_course_management.dto.request.ApiResponse;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserChangePasswordRequest;
+import com.ntabodoiqua.online_course_management.dto.request.user.UserFilterRequest;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserSearchRequest;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserUpdateRequest;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
@@ -11,6 +12,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,15 +28,13 @@ public class AdminController {
     AdminService adminService;
 
     // Controller lấy danh sách người dùng
-    @GetMapping("/get-users")
-    ApiResponse<List<UserResponse>> getUsers(){
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        log.info("Username: {}", authentication.getName());
-        authentication.getAuthorities().forEach(grantedAuthority -> log.info(grantedAuthority.getAuthority()));
-
-        return ApiResponse.<List<UserResponse>>builder()
-                .result(adminService.getUsers())
+    @GetMapping
+    public ApiResponse<Page<UserResponse>> getUsers(
+            @ModelAttribute UserFilterRequest filter,
+            Pageable pageable
+    ) {
+        return ApiResponse.<Page<UserResponse>>builder()
+                .result(adminService.searchUsers(filter, pageable))
                 .build();
     }
 
@@ -68,14 +69,6 @@ public class AdminController {
         var result = adminService.changeUserPassword(userId, request.getNewPassword());
         return ApiResponse.<String>builder()
                 .result(result)
-                .build();
-    }
-
-    // Controller tìm kiếm người dùng theo tên hoặc username
-    @PostMapping("/search")
-    public ApiResponse<List<UserResponse>> searchUsers(@RequestBody UserSearchRequest request) {
-        return ApiResponse.<List<UserResponse>>builder()
-                .result(adminService.searchUsers(request))
                 .build();
     }
 

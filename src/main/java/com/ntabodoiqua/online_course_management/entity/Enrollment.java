@@ -1,5 +1,6 @@
 package com.ntabodoiqua.online_course_management.entity;
 
+import com.ntabodoiqua.online_course_management.enums.EnrollmentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -37,4 +38,7 @@ public class Enrollment {
     int totalLessons; // Tổng số bài học trong khóa học
 
     double progress; // Tiến độ học tập (0.0 - 1.0)
+
+    @Enumerated(EnumType.STRING)
+    EnrollmentStatus approvalStatus; // PENDING, APPROVED, REJECTED
 }

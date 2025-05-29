@@ -6,6 +6,7 @@ import com.ntabodoiqua.online_course_management.dto.response.course.CourseRespon
 import com.ntabodoiqua.online_course_management.entity.Category;
 import com.ntabodoiqua.online_course_management.entity.Course;
 import com.ntabodoiqua.online_course_management.entity.User;
+import com.ntabodoiqua.online_course_management.enums.DefaultUrl;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.CourseMapper;
@@ -60,11 +61,21 @@ public class CourseService {
         User instructor = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
+        // Xử lý thumbnail (nếu có)
+        String thumbnailUrl;
+        if (thumbnail != null && !thumbnail.isEmpty()) {
+            String fileName = fileStorageService.storeFile(thumbnail, true);
+            thumbnailUrl = "/uploads/public/" + fileName;
+        } else {
+            thumbnailUrl = DefaultUrl.COURSE_THUMBNAIL.getURL();
+        }
+
         // Lưu thumbnail vào hệ thống file
         String fileName = fileStorageService.storeFile(thumbnail, true);
         Course course = courseMapper.toCourse(request);
         course.setInstructor(instructor);
         course.setCategory(category);
+        course.setTotalLessons(0);
         course.setThumbnailUrl("/uploads/public/" + fileName);
         course.setCreatedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
