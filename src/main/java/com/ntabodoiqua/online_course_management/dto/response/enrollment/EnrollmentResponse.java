@@ -2,6 +2,7 @@ package com.ntabodoiqua.online_course_management.dto.response.enrollment;
 
 import com.ntabodoiqua.online_course_management.dto.response.course.CourseResponse;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
+import com.ntabodoiqua.online_course_management.enums.EnrollmentStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -21,4 +22,5 @@ public class EnrollmentResponse {
     boolean isCompleted;
     LocalDate completionDate;
     double progress;
+    EnrollmentStatus approvalStatus; // PENDING, APPROVED, REJECTED
 }

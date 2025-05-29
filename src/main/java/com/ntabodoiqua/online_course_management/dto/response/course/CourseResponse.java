@@ -28,4 +28,5 @@ public class CourseResponse {
 
     // Thông tin về giảng viên
     UserResponse instructor;
+    boolean requiresApproval;
 }

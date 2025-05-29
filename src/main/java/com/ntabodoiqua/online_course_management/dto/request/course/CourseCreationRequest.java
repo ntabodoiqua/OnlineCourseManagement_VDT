@@ -19,4 +19,5 @@ public class CourseCreationRequest {
     LocalDate endDate;
     String instructorId;
     String categoryName;
+    boolean requiresApproval;
 }

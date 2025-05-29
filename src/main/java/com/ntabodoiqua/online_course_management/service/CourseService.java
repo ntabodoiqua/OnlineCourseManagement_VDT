@@ -71,14 +71,20 @@ public class CourseService {
         }
 
         // Lưu thumbnail vào hệ thống file
+        assert thumbnail != null;
         String fileName = fileStorageService.storeFile(thumbnail, true);
         Course course = courseMapper.toCourse(request);
         course.setInstructor(instructor);
         course.setCategory(category);
         course.setTotalLessons(0);
+        // Thiết lập active nếu ngày hiện tại nằm trong khoảng thời gian khóa học
+        LocalDateTime now = LocalDateTime.now();
+        course.setActive(now.isAfter(request.getStartDate().atStartOfDay())
+                && now.isBefore(request.getEndDate().atTime(23, 59, 59)));
         course.setThumbnailUrl("/uploads/public/" + fileName);
         course.setCreatedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
+        course.setRequiresApproval(request.isRequiresApproval());
 
         // Lưu khóa học vào cơ sở dữ liệu
         courseRepository.save(course);
@@ -100,6 +106,7 @@ public class CourseService {
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
             course.setCategory(category);
         }
+
 
         course.setUpdatedAt(LocalDateTime.now());
         courseRepository.save(course);

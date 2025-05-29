@@ -1,9 +1,11 @@
 package com.ntabodoiqua.online_course_management.dto.response.lesson;
 
+import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +18,7 @@ public class LessonResponse {
     String content;
     String videoUrl;
     String attachmentUrl;
-    int orderIndex;
-    LocalDate startDate;
-    LocalDate endDate;
+    LocalDateTime createdAt;
+    LocalDateTime updatedAt;
+    UserResponse createdBy;
 }

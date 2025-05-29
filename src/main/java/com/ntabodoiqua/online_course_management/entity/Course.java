@@ -40,12 +40,11 @@ public class Course {
     @ManyToOne
     User instructor; // Giảng viên phụ trách khóa học
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    Set<Lesson> lessons; // Danh sách các bài học trong khóa học
-
     @ManyToOne
     @JoinColumn(name = "category_id")
     Category category; // Danh mục của khóa học
 
     boolean requiresApproval;
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    Set<CourseLesson> courseLessons;
 }

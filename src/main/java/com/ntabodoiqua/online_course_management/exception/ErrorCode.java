@@ -39,8 +39,29 @@ public enum ErrorCode {
     // Lỗi file
     FILE_CANNOT_STORED(1024, "File cannot be stored", HttpStatus.INTERNAL_SERVER_ERROR),
     FILE_NOT_FOUND(1025, "File not found", HttpStatus.NOT_FOUND),
-    INVALID_IMAGE_TYPE(1026, "Invalid image type", HttpStatus.BAD_REQUEST)
+    INVALID_IMAGE_TYPE(1026, "Invalid image type", HttpStatus.BAD_REQUEST),
 
+
+    // Lỗi đăng ký khóa học
+    COURSE_NOT_AVAILABLE(1027, "Course is not available", HttpStatus.BAD_REQUEST),
+    ALREADY_ENROLLED(1028, "You are already enrolled in this course", HttpStatus.BAD_REQUEST),
+    ENROLLMENT_NOT_EXISTED(1029, "Enrollment not existed", HttpStatus.NOT_FOUND),
+    CANNOT_CANCEL_COMPLETED_ENROLLMENT(1030, "Cannot cancel completed enrollment", HttpStatus.BAD_REQUEST),
+    ENROLLMENT_ALREADY_PROCESSED(1031, "Enrollment has already been processed", HttpStatus.BAD_REQUEST),
+
+    // Lỗi bài học
+    LESSON_NOT_FOUND(1032, "Lesson not found", HttpStatus.NOT_FOUND),
+    LESSON_IS_USED_IN_COURSE(1033, "Lesson is used in course", HttpStatus.BAD_REQUEST),
+
+    // Lỗi bài học trong khóa học
+    LESSON_ALREADY_IN_COURSE(1034, "Lesson already in course", HttpStatus.BAD_REQUEST),
+    PREQUISITE_NOT_FOUND(1035, "Prerequisite lesson not found", HttpStatus.NOT_FOUND),
+    PREQUISITE_MUST_SAME_COURSE(1036, "Prerequisite lesson must be in the same course", HttpStatus.BAD_REQUEST),
+    COURSE_LESSON_NOT_FOUND(1037, "Course lesson not found", HttpStatus.NOT_FOUND),
+    COURSE_LESSON_COURSE_MISMATCH(1038, "Course lesson does not belong to the specified course", HttpStatus.BAD_REQUEST),
+    PREQUISITE_CANNOT_SELF(1039, "Prerequisite cannot be the same as the lesson itself", HttpStatus.BAD_REQUEST),
+    PREQUISITE_CIRCULAR(1040, "Circular prerequisite detected", HttpStatus.BAD_REQUEST),
+    COURSE_LESSON_HAS_DEPENDENT(1041, "Course lesson has dependent lessons", HttpStatus.BAD_REQUEST)
 
     ;
 

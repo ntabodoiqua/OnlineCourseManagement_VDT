@@ -1,6 +1,11 @@
 package com.ntabodoiqua.online_course_management.repository;
 
+import com.ntabodoiqua.online_course_management.entity.Course;
 import com.ntabodoiqua.online_course_management.entity.Enrollment;
+import com.ntabodoiqua.online_course_management.entity.User;
+import com.ntabodoiqua.online_course_management.enums.EnrollmentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,6 +15,8 @@ import java.util.Optional;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, String> {
     Optional<Enrollment> findByStudentIdAndCourseId(String studentId, String courseId);
-    List<Enrollment> findByStudentId(String studentId);
+    Page<Enrollment> findByStudent(User student, Pageable pageable);
     boolean existsByStudentIdAndCourseId(String studentId, String courseId);
+    Page<Enrollment> findByCourseAndApprovalStatus(Course course, EnrollmentStatus status, Pageable pageable);
+    List<Enrollment> findByStudent(User student);
 }

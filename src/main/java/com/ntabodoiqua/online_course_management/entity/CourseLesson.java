@@ -4,9 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 @Getter
 @Setter
 @Builder
@@ -14,22 +11,21 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-public class Lesson {
+public class CourseLesson {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
-    String title;
-
-    @Lob
-    String content;
-
-    String videoUrl;
-    String attachmentUrl;
-
-    LocalDateTime createdAt;
-    LocalDateTime updatedAt;
+    @ManyToOne
+    Course course;
 
     @ManyToOne
-    User createdBy;
+    Lesson lesson;
+
+    int orderIndex;
+    boolean isVisible;
+
+    // Chỉ 1 bài học trước (trong cùng khóa học)
+    @ManyToOne
+    CourseLesson prerequisite;
 }
