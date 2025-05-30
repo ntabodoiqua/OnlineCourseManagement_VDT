@@ -16,9 +16,9 @@ public class LessonSpecification {
             if (filter.getTitle() != null) {
                 predicates.add(cb.like(cb.lower(root.get("title")), "%" + filter.getTitle().toLowerCase() + "%"));
             }
-            if (filter.getContentKeyword() != null) {
-                predicates.add(cb.like(cb.lower(root.get("content")), "%" + filter.getContentKeyword().toLowerCase() + "%"));
-            }
+//            if (filter.getContentKeyword() != null) {
+//                predicates.add(cb.like(cb.lower(root.get("content")), "%" + filter.getContentKeyword().toLowerCase() + "%"));
+//            }
             if (filter.getCreatedBy() != null) {
                 predicates.add(cb.equal(root.get("createdBy").get("username"), filter.getCreatedBy()));
             }

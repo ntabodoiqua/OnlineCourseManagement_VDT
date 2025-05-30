@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LessonFilterRequest {
     String title;
-    String contentKeyword;
+//    String contentKeyword;
     String createdBy; // username hoặc id
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)

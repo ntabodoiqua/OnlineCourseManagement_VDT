@@ -70,4 +70,5 @@ public class EnrollmentController {
                 .result(enrollmentService.getPendingEnrollmentsByCourse(courseId, pageable))
                 .build();
     }
+
 }
