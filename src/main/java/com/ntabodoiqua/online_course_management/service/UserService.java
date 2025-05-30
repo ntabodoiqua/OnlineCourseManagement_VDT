@@ -161,7 +161,7 @@ public class UserService {
             throw new AppException(ErrorCode.INVALID_IMAGE_TYPE);
         }
 
-        String avatarUrl = "/files/public/" + uploadedFile.getFileName();
+        String avatarUrl = "/uploads/public/" + uploadedFile.getFileName();
         user.setAvatarUrl(avatarUrl);
         userRepository.save(user);
 

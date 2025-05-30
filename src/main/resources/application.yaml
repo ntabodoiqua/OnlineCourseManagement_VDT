@@ -26,3 +26,6 @@ file:
   public-dir: ./uploads/public/
   private-dir: ./uploads/private/
   max-size: 20MB
+
+recaptcha:
+  secret: 6LcNlVArAAAAAABVgugTwNHe5zM34fIJmYC_lm8w

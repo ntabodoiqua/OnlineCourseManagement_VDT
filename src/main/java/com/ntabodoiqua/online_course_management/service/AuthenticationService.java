@@ -23,25 +23,32 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuthenticationService {
-    UserRepository userRepository;
-    InvalidatedTokenRepository invalidatedTokenRepository;
+    final UserRepository userRepository;
+    final InvalidatedTokenRepository invalidatedTokenRepository;
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -49,6 +56,9 @@ public class AuthenticationService {
     @NonFinal
     @Value("${jwt.valid-duration}")
     protected long VALID_DURATION;
+
+    @Value("${recaptcha.secret}")
+    protected String recaptchaSecret;
 
     @NonFinal
     @Value("${jwt.refreshable-duration}")
@@ -58,28 +68,93 @@ public class AuthenticationService {
             throws JOSEException, ParseException {
         var token = request.getToken();
         boolean isValid = true;
-        // Nếu không có exception, trả về true, nếu có trả về false
+
         try {
-            verifyToken(token, false);
+            var signedJWT = verifyToken(token, false);
+            String username = signedJWT.getJWTClaimsSet().getSubject();
+
+            // Kiểm tra người dùng có bị vô hiệu hóa không
+            var user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+            if (!user.isEnabled()) {
+                isValid = false;
+            }
         } catch (AppException e) {
             isValid = false;
         }
+
         return IntrospectResponse.builder()
                 .valid(isValid)
                 .build();
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request){
+    private boolean verifyRecaptcha(String recaptchaToken) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("secret", recaptchaSecret);
+            params.add("response", recaptchaToken);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+            String url = "https://www.google.com/recaptcha/api/siteverify";
+            Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
+
+            return (Boolean) response.get("success");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+
+        // Lấy người dùng theo username
         var user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        boolean authenticated = passwordEncoder.matches(request.getPassword(),
-                user.getPassword());
+        // Nếu tài khoản đã bị khóa
+        if (!user.isEnabled()) {
+            throw new AppException(ErrorCode.USER_DISABLED_DUE_TO_TOO_MANY_ATTEMPTS);
+        }
 
-        if (!authenticated)
+        // Nếu sai >= 5 lần → yêu cầu xác minh reCAPTCHA
+        if (user.getLoginFailCount() >= 5) {
+            if (request.getRecaptchaToken() == null || !verifyRecaptcha(request.getRecaptchaToken())) {
+                throw new AppException(ErrorCode.INVALID_RECAPTCHA);
+            }
+        }
+
+        // Kiểm tra mật khẩu
+        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
+
+        if (!authenticated) {
+            // Tăng số lần sai
+            user.setLoginFailCount(user.getLoginFailCount() + 1);
+
+            // Khóa tài khoản nếu sai quá nhiều
+            if (user.getLoginFailCount() >= 10) {
+                user.setEnabled(false);
+            }
+
+            userRepository.save(user);
+
+            // Nếu từ 5–9 → yêu cầu xác minh phía frontend
+            if (user.getLoginFailCount() >= 5) {
+                throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS);
+            }
+
             throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
 
+        // Đăng nhập đúng → reset fail count
+        user.setLoginFailCount(0);
+        userRepository.save(user);
+
+        // Sinh JWT
         var token = generateToken(user);
 
         return AuthenticationResponse.builder()

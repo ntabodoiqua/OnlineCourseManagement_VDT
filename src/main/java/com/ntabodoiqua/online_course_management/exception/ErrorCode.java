@@ -61,7 +61,12 @@ public enum ErrorCode {
     COURSE_LESSON_COURSE_MISMATCH(1038, "Course lesson does not belong to the specified course", HttpStatus.BAD_REQUEST),
     PREQUISITE_CANNOT_SELF(1039, "Prerequisite cannot be the same as the lesson itself", HttpStatus.BAD_REQUEST),
     PREQUISITE_CIRCULAR(1040, "Circular prerequisite detected", HttpStatus.BAD_REQUEST),
-    COURSE_LESSON_HAS_DEPENDENT(1041, "Course lesson has dependent lessons", HttpStatus.BAD_REQUEST)
+    COURSE_LESSON_HAS_DEPENDENT(1041, "Course lesson has dependent lessons", HttpStatus.BAD_REQUEST),
+
+    USER_DISABLED(1042, "User is disabled", HttpStatus.BAD_REQUEST),
+    USER_DISABLED_DUE_TO_TOO_MANY_ATTEMPTS(1043, "User is disabled due to too many login attempts", HttpStatus.BAD_REQUEST),
+    TOO_MANY_ATTEMPTS(1044, "Too many login attempts, please try again later", HttpStatus.BAD_REQUEST),
+    INVALID_RECAPTCHA(1045, "Invalid reCAPTCHA", HttpStatus.BAD_REQUEST),
 
     ;
 

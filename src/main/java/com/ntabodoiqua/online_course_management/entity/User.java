@@ -45,4 +45,7 @@ public class User {
 
     @ManyToMany
     Set<Role> roles;
+
+    @Column(nullable = false)
+    int loginFailCount = 0;
 }
