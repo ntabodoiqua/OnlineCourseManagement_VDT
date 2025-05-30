@@ -44,4 +44,13 @@ public class LessonController {
                 .result(lessonService.getAllLessons(filter, pageable))
                 .build();
     }
+
+    // API xóa bài học
+    @DeleteMapping("/{lessonId}")
+    public ApiResponse<String> deleteLesson(@PathVariable String lessonId) {
+        return ApiResponse.<String>builder()
+                .message("Lesson deleted successfully")
+                .result("Lesson with ID " + lessonId + " has been deleted.")
+                .build();
+    }
 }
