@@ -13,6 +13,7 @@ import java.time.LocalDate;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ProgressResponse {
     String id;
+    String lessonId;
     LessonResponse lesson;
     boolean isCompleted;
     LocalDate completionDate;

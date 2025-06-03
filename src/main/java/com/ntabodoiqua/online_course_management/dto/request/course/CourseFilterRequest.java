@@ -17,7 +17,7 @@ public class CourseFilterRequest {
     String title;
     String instructorName;
     String category;
-    String isActive;
+    Boolean isActive;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     LocalDateTime createdFrom;

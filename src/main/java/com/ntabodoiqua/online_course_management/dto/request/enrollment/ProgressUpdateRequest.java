@@ -9,7 +9,9 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ProgressUpdateRequest {
+    @Setter
     String enrollmentId;
     String lessonId;
     boolean completed;
+
 }

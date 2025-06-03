@@ -40,8 +40,8 @@ public class CourseSpecification {
                 predicates.add(cb.or(firstNamePredicate, lastNamePredicate, fullNamePredicate));
             }
 
-            if (filter.getIsActive() != null && !filter.getIsActive().trim().isEmpty()) {
-                predicates.add(cb.equal(root.get("isActive"), Boolean.parseBoolean(filter.getIsActive())));
+            if (filter.getIsActive() != null) {
+                predicates.add(cb.equal(root.get("isActive"), filter.getIsActive()));
             }
 
             if (filter.getCreatedFrom() != null) {

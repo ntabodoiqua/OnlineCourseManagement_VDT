@@ -68,6 +68,10 @@ public enum ErrorCode {
     TOO_MANY_ATTEMPTS(1044, "Too many login attempts, please try again later", HttpStatus.BAD_REQUEST),
     INVALID_RECAPTCHA(1045, "Invalid reCAPTCHA", HttpStatus.BAD_REQUEST),
 
+    // Lỗi đánh giá khóa học
+    CANNOT_REVIEW_UNCOMPLETED_COURSE(1046, "Cannot review course before completion", HttpStatus.BAD_REQUEST),
+    ALREADY_REVIEWED(1047, "You have already reviewed this course", HttpStatus.BAD_REQUEST),
+
     ;
 
 
