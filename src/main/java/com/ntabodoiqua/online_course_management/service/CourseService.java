@@ -1,29 +1,37 @@
 package com.ntabodoiqua.online_course_management.service;
 
 import com.ntabodoiqua.online_course_management.dto.request.course.CourseCreationRequest;
+import com.ntabodoiqua.online_course_management.dto.request.course.CourseFilterRequest;
 import com.ntabodoiqua.online_course_management.dto.request.course.CourseUpdateRequest;
 import com.ntabodoiqua.online_course_management.dto.response.course.CourseResponse;
-import com.ntabodoiqua.online_course_management.entity.Category;
-import com.ntabodoiqua.online_course_management.entity.Course;
-import com.ntabodoiqua.online_course_management.entity.User;
+import com.ntabodoiqua.online_course_management.entity.*;
 import com.ntabodoiqua.online_course_management.enums.DefaultUrl;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.CourseMapper;
-import com.ntabodoiqua.online_course_management.repository.CategoryRepository;
-import com.ntabodoiqua.online_course_management.repository.CourseRepository;
-import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.mapper.UserMapper;
+import com.ntabodoiqua.online_course_management.repository.*;
 import com.ntabodoiqua.online_course_management.service.file.FileStorageService;
+import com.ntabodoiqua.online_course_management.specification.CourseSpecification;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +52,11 @@ public class CourseService {
     CategoryRepository categoryRepository;
     UserRepository userRepository;
     CourseMapper courseMapper;
+    UserMapper userMapper;
     FileStorageService fileStorageService;
+    CourseLessonRepository courseLessonRepository;
+    EnrollmentRepository enrollmentRepository;
+    CourseReviewRepository courseReviewRepository;
 
     // Service tạo khóa học mới
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
@@ -91,14 +103,27 @@ public class CourseService {
         return courseMapper.toCourseResponse(course);
     }
 
+    // Logic kiểm tra quyền truy cập
+    private void checkCoursePermission(Course course) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        boolean isAdmin = user.getRoles().stream().anyMatch(role -> role.getName().equals("ADMIN"));
+        boolean isOwner = course.getInstructor() != null && course.getInstructor().getUsername().equals(username);
+
+        if (!isAdmin && !isOwner) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
     // Service cập nhật khóa học
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
-    public CourseResponse updateCourse(String courseId, CourseUpdateRequest request) {
+    public CourseResponse updateCourse(String courseId, CourseUpdateRequest request, MultipartFile thumbnail) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
 
-        // Cập nhật thông tin từ DTO vào entity
-        courseMapper.updateCourse(course, request);
+        // Kiểm tra quyền truy cập
+        checkCoursePermission(course);
 
         // Nếu có thay đổi category
         if (request.getCategoryName() != null) {
@@ -107,13 +132,320 @@ public class CourseService {
             course.setCategory(category);
         }
 
+        // Nếu có thay đổi title
+        if (request.getTitle() != null && !request.getTitle().isEmpty()) {
+            if (courseRepository.existsByTitleIgnoreCase(request.getTitle())
+                    && !course.getTitle().equalsIgnoreCase(request.getTitle())) {
+                throw new AppException(ErrorCode.COURSE_EXISTED);
+            }
+            course.setTitle(request.getTitle());
+        }
 
         course.setUpdatedAt(LocalDateTime.now());
+        // Nếu có thay đổi thumbnail
+        if (thumbnail != null && !thumbnail.isEmpty()) {
+            String fileName = fileStorageService.storeFile(thumbnail, true);
+            course.setThumbnailUrl("/uploads/public/" + fileName);
+        }
+
+        course.setActive(request.getIsActive());
+        course.setDescription(request.getDescription());
+        course.setStartDate(request.getStartDate());
+        course.setEndDate(request.getEndDate());
+        course.setRequiresApproval(request.isRequiresApproval());
+
         courseRepository.save(course);
 
         return courseMapper.toCourseResponse(course);
     }
 
+    // Service xóa khóa học
+    @Transactional
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public void deleteCourse(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
 
+        checkCoursePermission(course);
 
+        // Xóa các liên kết
+        courseLessonRepository.deleteByCourseId(courseId);
+        enrollmentRepository.deleteByCourseId(courseId);
+        courseReviewRepository.deleteByCourseId(courseId);
+
+        // Xóa khóa học
+        courseRepository.delete(course);
+
+        log.info("Deleted course {} and all related records", courseId);
+    }
+
+    /**
+     * Lấy thông tin khóa học theo ID với phân quyền
+     * - Admin: Xem toàn bộ thông tin tất cả khóa học (kể cả inactive)
+     * - Instructor: Xem toàn bộ thông tin khóa học của mình (kể cả inactive), thông tin cơ bản khóa học active khác
+     * - Student/Guest: Chỉ xem thông tin cơ bản của khóa học active
+     */
+    public CourseResponse getCourseById(String courseId) {
+        log.info("Getting course by ID: {}", courseId);
+
+        // 1. Tìm course theo ID
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+
+        // 2. Kiểm tra quyền truy cập
+        AccessLevel accessLevel = checkAccessLevel(course);
+
+        // 3. Kiểm tra khóa học có active không (đối với user thường)
+        if (accessLevel == AccessLevel.NO_ACCESS) {
+            log.warn("User attempted to access inactive course: {}", courseId);
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        boolean hasFullAccess = (accessLevel == AccessLevel.FULL_ACCESS);
+
+        log.info("Accessing course {} with access level: {}", courseId, accessLevel);
+
+        return mapCourseToResponse(course, hasFullAccess);
+    }
+
+    /**
+     * Enum để định nghĩa mức độ truy cập
+     */
+    private enum AccessLevel {
+        FULL_ACCESS,    // Xem toàn bộ thông tin
+        BASIC_ACCESS,   // Chỉ xem thông tin cơ bản
+        NO_ACCESS       // Không được xem
+    }
+
+    /**
+     * Kiểm tra mức độ truy cập của user đối với course
+     */
+    private AccessLevel checkAccessLevel(Course course) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Anonymous user hoặc chưa đăng nhập
+        if (authentication == null || !authentication.isAuthenticated() ||
+                authentication instanceof AnonymousAuthenticationToken) {
+            log.debug("Anonymous user accessing course {}", course.getId());
+            return course.isActive() ? AccessLevel.BASIC_ACCESS : AccessLevel.NO_ACCESS;
+        }
+
+        String username = authentication.getName();
+        List<String> roles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        boolean isAdmin = roles.contains("ROLE_ADMIN");
+        boolean isInstructor = roles.contains("ROLE_INSTRUCTOR");
+
+        log.debug("User {} roles: {}, course active: {}", username, roles, course.isActive());
+
+        // Admin có quyền xem tất cả (kể cả inactive)
+        if (isAdmin) {
+            log.debug("User {} has ADMIN role - full access", username);
+            return AccessLevel.FULL_ACCESS;
+        }
+
+        // Instructor có quyền xem tất cả khóa học của mình (kể cả inactive)
+        if (isInstructor) {
+            boolean isOwner = course.getInstructor().getUsername().equals(username);
+            if (isOwner) {
+                log.debug("User {} is course owner - full access", username);
+                return AccessLevel.FULL_ACCESS;
+            } else {
+                // Instructor xem khóa học của người khác
+                log.debug("User {} is instructor but not owner, course active: {}", username, course.isActive());
+                return course.isActive() ? AccessLevel.BASIC_ACCESS : AccessLevel.NO_ACCESS;
+            }
+        }
+
+        // Student và các role khác chỉ xem được khóa học active
+        log.debug("User {} has limited access, course active: {}", username, course.isActive());
+        return course.isActive() ? AccessLevel.BASIC_ACCESS : AccessLevel.NO_ACCESS;
+    }
+
+    /**
+     * Định nghĩa Course Response tùy quyền
+     */
+    private CourseResponse mapCourseToResponse(Course course, boolean full) {
+        if (full) {
+            log.debug("Returning full course information for course: {}", course.getId());
+            return courseMapper.toCourseResponse(course);
+        } else {
+            log.debug("Returning basic course information for course: {}", course.getId());
+            // Chỉ trả về id, title, ngày tạo, giảng viên, thumbnail, các trường khác null
+            return CourseResponse.builder()
+                    .id(course.getId())
+                    .title(course.getTitle())
+                    .createdAt(course.getCreatedAt())
+                    .instructor(userMapper.toUserResponse(course.getInstructor()))
+                    .thumbnailUrl(course.getThumbnailUrl())
+                    .build();
+        }
+    }
+
+    /**
+     * Alternative method: Sử dụng khi cần kiểm tra quyền với logic đặc biệt
+     */
+    public CourseResponse getCourseByIdWithCustomAuth(String courseId, String username, List<String> roles) {
+        log.info("Getting course by ID: {} for user: {}", courseId, username);
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+
+        AccessLevel accessLevel = checkAccessLevelWithRoles(course, username, roles);
+
+        if (accessLevel == AccessLevel.NO_ACCESS) {
+            log.warn("User {} attempted to access unauthorized course: {}", username, courseId);
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        boolean hasFullAccess = (accessLevel == AccessLevel.FULL_ACCESS);
+
+        return mapCourseToResponse(course, hasFullAccess);
+    }
+
+    /**
+     * Kiểm tra mức độ truy cập với roles được truyền vào
+     */
+    private AccessLevel checkAccessLevelWithRoles(Course course, String username, List<String> roles) {
+        boolean isAdmin = roles.contains("ROLE_ADMIN");
+        boolean isInstructor = roles.contains("ROLE_INSTRUCTOR");
+
+        // Admin có quyền xem tất cả (kể cả inactive)
+        if (isAdmin) {
+            return AccessLevel.FULL_ACCESS;
+        }
+
+        // Instructor có quyền xem tất cả khóa học của mình (kể cả inactive)
+        if (isInstructor) {
+            boolean isOwner = course.getInstructor().getUsername().equals(username);
+            if (isOwner) {
+                return AccessLevel.FULL_ACCESS;
+            } else {
+                return course.isActive() ? AccessLevel.BASIC_ACCESS : AccessLevel.NO_ACCESS;
+            }
+        }
+
+        // Student và các role khác chỉ xem được khóa học active
+        return course.isActive() ? AccessLevel.BASIC_ACCESS : AccessLevel.NO_ACCESS;
+    }
+    /**
+     * Lấy danh sách khóa học với phân trang và lọc
+     * - Admin: Xem tất cả khóa học (kể cả inactive)
+     * - Instructor: Xem tất cả khóa học active + khóa học của mình (kể cả inactive)
+     * - Student/Guest: Chỉ xem khóa học active
+     */
+    public Page<CourseResponse> getCourses(CourseFilterRequest filter, Pageable pageable) {
+        log.info("Getting courses with filter: {}, page: {}", filter, pageable);
+
+        // Kiểm tra quyền truy cập
+        CourseAccessInfo accessInfo = getCurrentUserAccessInfo();
+
+        // Tạo specification với phân quyền
+        Specification<Course> spec = CourseSpecification.withFilterAndPermission(
+                filter,
+                accessInfo.canViewInactive(),
+                accessInfo.instructorUsername()
+        );
+
+        // Lấy danh sách khóa học
+        Page<Course> coursePage = courseRepository.findAll(spec, pageable);
+
+        log.info("Found {} courses for user with access level: {}",
+                coursePage.getTotalElements(), accessInfo.accessLevel());
+
+        // Convert sang response với phân quyền
+        return coursePage.map(course -> {
+            boolean hasFullAccess = determineFullAccess(course, accessInfo);
+            return mapCourseToResponse(course, hasFullAccess);
+        });
+    }
+
+    /**
+     * Alternative method với custom authentication
+     */
+    public Page<CourseResponse> getCoursesWithCustomAuth(CourseFilterRequest filter,
+                                                         Pageable pageable,
+                                                         String username,
+                                                         List<String> roles) {
+        log.info("Getting courses with custom auth for user: {}, roles: {}", username, roles);
+
+        CourseAccessInfo accessInfo = buildAccessInfo(username, roles);
+
+        Specification<Course> spec = CourseSpecification.withFilterAndPermission(
+                filter,
+                accessInfo.canViewInactive(),
+                accessInfo.instructorUsername()
+        );
+
+        Page<Course> coursePage = courseRepository.findAll(spec, pageable);
+
+        return coursePage.map(course -> {
+            boolean hasFullAccess = determineFullAccess(course, accessInfo);
+            return mapCourseToResponse(course, hasFullAccess);
+        });
+    }
+
+    /**
+     * Record để lưu thông tin truy cập của user
+     */
+    private record CourseAccessInfo(
+            String username,
+            List<String> roles,
+            boolean canViewInactive,
+            String instructorUsername,
+            String accessLevel
+    ) {}
+
+    /**
+     * Lấy thông tin truy cập của user hiện tại
+     */
+    private CourseAccessInfo getCurrentUserAccessInfo() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() ||
+                authentication instanceof AnonymousAuthenticationToken) {
+            log.debug("Anonymous user accessing course list");
+            return new CourseAccessInfo(null, List.of(), false, null, "ANONYMOUS");
+        }
+
+        String username = authentication.getName();
+        List<String> roles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return buildAccessInfo(username, roles);
+    }
+
+    /**
+     * Xây dựng thông tin truy cập từ username và roles
+     */
+    private CourseAccessInfo buildAccessInfo(String username, List<String> roles) {
+        boolean isAdmin = roles.contains("ROLE_ADMIN");
+        boolean isInstructor = roles.contains("ROLE_INSTRUCTOR");
+
+        if (isAdmin) {
+            return new CourseAccessInfo(username, roles, true, null, "ADMIN");
+        } else if (isInstructor) {
+            return new CourseAccessInfo(username, roles, false, username, "INSTRUCTOR");
+        } else {
+            return new CourseAccessInfo(username, roles, false, null, "STUDENT");
+        }
+    }
+
+    /**
+     * Xác định user có quyền xem full thông tin course không
+     */
+    private boolean determineFullAccess(Course course, CourseAccessInfo accessInfo) {
+        if (accessInfo.roles().contains("ROLE_ADMIN")) {
+            return true;
+        }
+
+        if (accessInfo.roles().contains("ROLE_INSTRUCTOR")) {
+            return course.getInstructor().getUsername().equals(accessInfo.username());
+        }
+
+        return false;
+    }
 }

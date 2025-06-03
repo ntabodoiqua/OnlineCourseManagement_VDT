@@ -14,4 +14,5 @@ public interface CourseReviewRepository extends JpaRepository<CourseReview, Stri
     List<CourseReview> findByCourseId(String courseId);
 
     List<CourseReview> findByCourseIdAndIsApprovedTrue(String courseId);
+    void deleteByCourseId(String courseId);
 }

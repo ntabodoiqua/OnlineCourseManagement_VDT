@@ -30,7 +30,10 @@ public class User {
     // Đường dẫn ảnh đại diện
     String avatarUrl;
 
+    @Column(unique = true)
     String email;
+
+    @Column(unique = true)
     String phone;
 
     boolean enabled; // Trạng thái tài khoản (đã kích hoạt hay chưa)
