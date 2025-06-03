@@ -91,6 +91,11 @@ public class CourseLessonService {
                 .build();
 
         courseLesson = courseLessonRepository.save(courseLesson);
+
+        // Cập nhật tổng số bài học
+        course.setTotalLessons(course.getTotalLessons() + 1);
+        courseRepository.save(course);
+
         return courseLessonMapper.toCourseLessonResponse(courseLesson);
     }
 
@@ -141,13 +146,20 @@ public class CourseLessonService {
         if (!courseLesson.getCourse().getId().equals(courseId))
             throw new AppException(ErrorCode.COURSE_LESSON_COURSE_MISMATCH);
 
-        // Nếu có bài học nào khác phụ thuộc courseLesson này, không cho xóa (optional)
-        boolean hasDependent = courseLessonRepository.findByCourseOrderByOrderIndexAsc(courseLesson.getCourse())
-                .stream()
-                .anyMatch(cl -> cl.getPrerequisite() != null && cl.getPrerequisite().getId().equals(courseLessonId));
-        if (hasDependent) throw new AppException(ErrorCode.COURSE_LESSON_HAS_DEPENDENT);
+        // Kiểm tra xem bài học có phải là điều kiện tiên quyết của bài học khác không
+        if (courseLessonRepository.existsByPrerequisiteId(courseLessonId)) {
+            throw new AppException(ErrorCode.COURSE_LESSON_HAS_DEPENDENT);
+        }
 
-        courseLessonRepository.deleteById(courseLessonId);
+        Course course = courseLesson.getCourse();
+        courseLessonRepository.delete(courseLesson);
+
+        // Cập nhật tổng số bài học
+        if (course.getTotalLessons() <= 0) {
+            throw new AppException(ErrorCode.COURSE_LESSON_TOTAL_LESSONS_ZERO);
+        }
+        course.setTotalLessons(course.getTotalLessons() - 1);
+        courseRepository.save(course);
     }
 
     public Page<CourseLessonResponse> getLessonsOfCourse(String courseId, CourseLessonFilterRequest filter, Pageable pageable) {

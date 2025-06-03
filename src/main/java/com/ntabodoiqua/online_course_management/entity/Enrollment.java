@@ -35,8 +35,6 @@ public class Enrollment {
     // Ngày hoàn thành khóa học (nếu đã hoàn thành)
     LocalDate completionDate;
 
-    int totalLessons; // Tổng số bài học trong khóa học
-
     double progress; // Tiến độ học tập (0.0 - 1.0)
 
     @Enumerated(EnumType.STRING)

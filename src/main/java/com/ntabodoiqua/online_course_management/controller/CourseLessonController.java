@@ -24,6 +24,7 @@ import java.util.List;
 public class CourseLessonController {
     CourseLessonService courseLessonService;
 
+    // Controller thêm bài học vào khóa học
     @PostMapping
     public ApiResponse<CourseLessonResponse> addLessonToCourse(
             @PathVariable String courseId,

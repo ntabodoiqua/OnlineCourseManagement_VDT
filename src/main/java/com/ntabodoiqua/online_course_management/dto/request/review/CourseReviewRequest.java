@@ -9,8 +9,6 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CourseReviewRequest {
-    String studentId;
-    String courseId;
     int rating;
     String comment;
 }

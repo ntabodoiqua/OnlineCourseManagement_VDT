@@ -45,7 +45,7 @@ public class ProgressService {
         progressRepository.save(progress);
         // Cập nhật progress tổng thể cho enrollment
         long completed = progressRepository.countByEnrollmentIdAndIsCompletedTrue(request.getEnrollmentId());
-        int total = enrollment.getTotalLessons();
+        int total = enrollment.getCourse().getTotalLessons();
         enrollment.setProgress(total > 0 ? (double) completed / total : 0.0);
         if (completed == total && total > 0) {
             enrollment.setCompleted(true);

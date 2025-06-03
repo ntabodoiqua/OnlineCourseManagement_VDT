@@ -71,7 +71,7 @@ public enum ErrorCode {
     // Lỗi đánh giá khóa học
     CANNOT_REVIEW_UNCOMPLETED_COURSE(1046, "Cannot review course before completion", HttpStatus.BAD_REQUEST),
     ALREADY_REVIEWED(1047, "You have already reviewed this course", HttpStatus.BAD_REQUEST),
-
+    COURSE_LESSON_TOTAL_LESSONS_ZERO(1048, "Total lessons in course cannot be zero", HttpStatus.BAD_REQUEST)
     ;
 
 

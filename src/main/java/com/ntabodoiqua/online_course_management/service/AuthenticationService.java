@@ -205,6 +205,12 @@ public class AuthenticationService {
                 // không tìm thấy username
                 () -> new AppException(ErrorCode.UNAUTHENTICATED)
         );
+
+        // Kiểm tra trạng thái enabled của người dùng
+        if (!user.isEnabled()) {
+            throw new AppException(ErrorCode.USER_DISABLED);
+        }
+
         var token = generateToken(user);
         return AuthenticationResponse.builder()
                 .token(token)

@@ -20,5 +20,5 @@ public class CourseUpdateRequest {
     String categoryName;
     // Chỉnh sửa trạng thái khóa học
     Boolean isActive;
-    boolean requiresApproval;
+    Boolean requiresApproval;
 }

@@ -15,4 +15,5 @@ public interface CourseLessonRepository extends JpaRepository<CourseLesson, Stri
     boolean existsByLessonId(String lessonId);
     @Transactional
     void deleteByCourseId(String courseId);
+    boolean existsByPrerequisiteId(String prerequisiteId);
 }

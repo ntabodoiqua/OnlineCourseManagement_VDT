@@ -122,17 +122,16 @@ public class CourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
 
-        // Kiểm tra quyền truy cập
         checkCoursePermission(course);
 
-        // Nếu có thay đổi category
+        // Category
         if (request.getCategoryName() != null) {
             Category category = categoryRepository.findFirstByNameContainingIgnoreCase(request.getCategoryName())
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
             course.setCategory(category);
         }
 
-        // Nếu có thay đổi title
+        // Title
         if (request.getTitle() != null && !request.getTitle().isEmpty()) {
             if (courseRepository.existsByTitleIgnoreCase(request.getTitle())
                     && !course.getTitle().equalsIgnoreCase(request.getTitle())) {
@@ -141,19 +140,43 @@ public class CourseService {
             course.setTitle(request.getTitle());
         }
 
-        course.setUpdatedAt(LocalDateTime.now());
-        // Nếu có thay đổi thumbnail
+        // Thumbnail
         if (thumbnail != null && !thumbnail.isEmpty()) {
             String fileName = fileStorageService.storeFile(thumbnail, true);
             course.setThumbnailUrl("/uploads/public/" + fileName);
         }
 
-        course.setActive(request.getIsActive());
-        course.setDescription(request.getDescription());
-        course.setStartDate(request.getStartDate());
-        course.setEndDate(request.getEndDate());
-        course.setRequiresApproval(request.isRequiresApproval());
+        // Description
+        if (request.getDescription() != null) {
+            course.setDescription(request.getDescription());
+        }
 
+        // Detailed Description
+        if (request.getDetailedDescription() != null) {
+            course.setDetailedDescription(request.getDetailedDescription());
+        }
+
+        // Start Date
+        if (request.getStartDate() != null) {
+            course.setStartDate(request.getStartDate());
+        }
+
+        // End Date
+        if (request.getEndDate() != null) {
+            course.setEndDate(request.getEndDate());
+        }
+
+        // isActive
+        if (request.getIsActive() != null) {
+            course.setActive(request.getIsActive());
+        }
+
+        // requiresApproval
+        if (request.getRequiresApproval() != null) {
+            course.setRequiresApproval(request.getRequiresApproval());
+        }
+
+        course.setUpdatedAt(LocalDateTime.now());
         courseRepository.save(course);
 
         return courseMapper.toCourseResponse(course);

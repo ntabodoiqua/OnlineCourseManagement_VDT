@@ -74,7 +74,6 @@ public class EnrollmentService {
                 .enrollmentDate(LocalDate.now())
                 .isCompleted(false)
                 .progress(0.0)
-                .totalLessons(course.getTotalLessons())
                 .approvalStatus(course.isRequiresApproval() ?
                         EnrollmentStatus.PENDING : EnrollmentStatus.APPROVED)
                 .build();

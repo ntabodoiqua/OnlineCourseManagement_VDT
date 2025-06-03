@@ -13,5 +13,4 @@ public class ProgressUpdateRequest {
     String enrollmentId;
     String lessonId;
     boolean completed;
-
 }

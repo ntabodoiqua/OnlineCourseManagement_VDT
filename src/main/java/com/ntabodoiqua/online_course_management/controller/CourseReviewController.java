@@ -17,11 +17,20 @@ import org.springframework.web.bind.annotation.*;
 public class CourseReviewController {
     CourseReviewService courseReviewService;
 
-    @PostMapping
+    @PostMapping("/{courseId}")
     @PreAuthorize("hasRole('STUDENT')")
-    public ApiResponse<CourseReviewResponse> createReview(@RequestBody CourseReviewRequest request) {
+    public ApiResponse<CourseReviewResponse> createReview(@RequestBody CourseReviewRequest request, @PathVariable String courseId) {
         return ApiResponse.<CourseReviewResponse>builder()
-                .result(courseReviewService.createReview(request))
+                .result(courseReviewService.createReview(request, courseId))
+                .build();
+    }
+
+    // Lấy danh sách đánh giá của khóa học
+    @GetMapping("/{courseId}")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ApiResponse<?> getReviewsByCourseId(@PathVariable String courseId) {
+        return ApiResponse.<Object>builder()
+                .result(courseReviewService.getReviewsByCourse(courseId))
                 .build();
     }
 } 
