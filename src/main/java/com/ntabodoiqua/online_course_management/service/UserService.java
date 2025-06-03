@@ -2,6 +2,7 @@ package com.ntabodoiqua.online_course_management.service;
 
 import com.ntabodoiqua.online_course_management.constant.PredefinedRole;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserCreationRequest;
+import com.ntabodoiqua.online_course_management.dto.request.user.UserUpdateRequest;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
 import com.ntabodoiqua.online_course_management.entity.Role;
 import com.ntabodoiqua.online_course_management.entity.UploadedFile;
@@ -166,6 +167,63 @@ public class UserService {
         userRepository.save(user);
 
         return avatarUrl;
+    }
+
+    // Service người dùng cập nhật thông tin cá nhân
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public UserResponse updateMyInfo(UserUpdateRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Kiểm tra trùng email
+        if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
+        // Kiểm tra trùng số điện thoại
+        if (!user.getPhone().equals(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
+            throw new AppException(ErrorCode.PHONE_EXISTED);
+        }
+
+        // Cập nhật thông tin người dùng
+        user.setUpdatedAt(LocalDateTime.now());
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setBio(request.getBio());
+        user.setDob(request.getDob());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
+        user = userRepository.save(user);
+        return userMapper.toUserResponse(user);
+    }
+
+    // Service người dùng xóa tài khoản
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public String deleteMyAccount() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Xóa người dùng
+        userRepository.delete(user);
+        log.info("User {} deleted their account successfully", username);
+        return "Account deleted successfully";
+    }
+
+    // Service người dùng disable tài khoản
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public String disableMyAccount() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Disable tài khoản
+        user.setEnabled(false);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        log.info("User {} disabled their account successfully", username);
+        return "Account disabled successfully";
     }
 
 }

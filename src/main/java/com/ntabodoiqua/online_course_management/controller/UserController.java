@@ -3,6 +3,7 @@ package com.ntabodoiqua.online_course_management.controller;
 import com.ntabodoiqua.online_course_management.dto.request.ApiResponse;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserChangePasswordRequest;
 import com.ntabodoiqua.online_course_management.dto.request.user.UserCreationRequest;
+import com.ntabodoiqua.online_course_management.dto.request.user.UserUpdateRequest;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
 import com.ntabodoiqua.online_course_management.entity.User;
 import com.ntabodoiqua.online_course_management.exception.AppException;
@@ -26,9 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class UserController {
-    UserRepository userRepository;
     UserService userService;
-    FileStorageService fileStorageService;
 
     // Controller tạo người dùng mới
     @PostMapping
@@ -73,6 +72,36 @@ public class UserController {
         return ApiResponse.<String>builder()
                 .message("Avatar updated successfully from existing file")
                 .result(avatarUrl)
+                .build();
+    }
+
+    // Controller người dùng cập nhật thông tin cá nhân
+    @PutMapping("/update-info")
+    public ApiResponse<UserResponse> updateMyInfo(@RequestBody @Valid UserUpdateRequest request) {
+        UserResponse updatedUser = userService.updateMyInfo(request);
+        return ApiResponse.<UserResponse>builder()
+                .message("User information updated successfully")
+                .result(updatedUser)
+                .build();
+    }
+
+    // Controller người dùng xóa tài khoản
+    @DeleteMapping
+    public ApiResponse<String> deleteMyAccount() {
+        userService.deleteMyAccount();
+        return ApiResponse.<String>builder()
+                .message("User account deleted successfully")
+                .result("Your account has been deleted")
+                .build();
+    }
+
+    // Controller người dùng disable tài khoản
+    @PutMapping("/disable")
+    public ApiResponse<String> disableMyAccount() {
+        String result = userService.disableMyAccount();
+        return ApiResponse.<String>builder()
+                .message("User account disabled successfully")
+                .result(result)
                 .build();
     }
 

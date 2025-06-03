@@ -97,7 +97,22 @@ public class FileStorageService {
     }
 
     // Service để làm cho file trở nên riêng tư
-    // Sẽ triển khai sau khi có yêu cầu từ người dùng
+    public String makeFilePrivate(String fileName, String currentUsername) {
+        UploadedFile uploadedFile = uploadedFileRepository.findByFileName(fileName)
+                .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
+
+        if (!uploadedFile.getUploadedBy().getUsername().equals(currentUsername)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (!uploadedFile.isPublic()) {
+            return "File is already private: " + fileName;
+        }
+
+        uploadedFile.setPublic(false);
+        uploadedFileRepository.save(uploadedFile);
+        return "File is now private: " + fileName;
+    }
 
     // Service để lấy tất cả ảnh công khai của người dùng
     public List<String> getAllPublicImagesOfUser(String username) {

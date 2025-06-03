@@ -13,11 +13,13 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserUpdateRequest {
-    String password;
     String firstName;
     String lastName;
     // Custom Validation: Giới hạn tuổi nhập vào
     @DobConstraint(min = 2, message = "INVALID_DOB")
     LocalDate dob;
+    String email;
+    String phone;
+    String bio;
     List<String> roles;
 }
