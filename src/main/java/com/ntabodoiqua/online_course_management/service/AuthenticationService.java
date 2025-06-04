@@ -121,13 +121,6 @@ public class AuthenticationService {
             throw new AppException(ErrorCode.USER_DISABLED_DUE_TO_TOO_MANY_ATTEMPTS);
         }
 
-        // Nếu sai >= 5 lần → yêu cầu xác minh reCAPTCHA
-        if (user.getLoginFailCount() >= 5) {
-            if (request.getRecaptchaToken() == null || !verifyRecaptcha(request.getRecaptchaToken())) {
-                throw new AppException(ErrorCode.INVALID_RECAPTCHA);
-            }
-        }
-
         // Kiểm tra mật khẩu
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
 

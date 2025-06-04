@@ -3,7 +3,7 @@ package com.ntabodoiqua.online_course_management.dto.request.user;
 
 import com.ntabodoiqua.online_course_management.enums.Gender;
 import lombok.*;
-import lombok.experimental.FieldDefaults;
+        import lombok.experimental.FieldDefaults;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;

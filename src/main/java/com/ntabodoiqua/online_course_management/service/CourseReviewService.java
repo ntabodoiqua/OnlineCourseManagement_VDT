@@ -67,7 +67,7 @@ public class CourseReviewService {
                 .comment(review.getComment())
                 .reviewDate(review.getReviewDate())
                 .isApproved(review.isApproved())
-                .student(userMapper.toUserResponse(student)) // Có thể map sang UserResponse nếu cần
+                .student(userMapper.toUserResponse(student))
                 .build();
     }
 

@@ -82,15 +82,31 @@ public class AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
+        // Kiểm tra trùng email (nếu email thay đổi)
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            boolean emailExists = userRepository.existsByEmailAndIdNot(request.getEmail(), userId);
+            if (emailExists) {
+                throw new AppException(ErrorCode.EMAIL_EXISTED);
+            }
+        }
+
+        // Kiểm tra trùng số điện thoại (nếu phone thay đổi)
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            boolean phoneExists = userRepository.existsByPhoneAndIdNot(request.getPhone(), userId);
+            if (phoneExists) {
+                throw new AppException(ErrorCode.PHONE_EXISTED);
+            }
+        }
+
         userMapper.updateUser(user, request);
         var roles = roleRepository.findAllById(request.getRoles());
         user.setRoles(new HashSet<>(roles));
 
-        // Thiết lập thời gian cập nhật
         user.setUpdatedAt(LocalDateTime.now());
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
+
 
     // Service tìm kiếm người dùng theo tên, username
     @PreAuthorize("hasRole('ADMIN')")
