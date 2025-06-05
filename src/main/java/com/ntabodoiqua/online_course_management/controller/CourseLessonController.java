@@ -69,4 +69,17 @@ public class CourseLessonController {
                 .result(courseLessonService.getLessonsOfCourse(courseId, filter, pageable))
                 .build();
     }
+
+    // Lấy thông tin chi tiết của một course lesson theo ID
+    @GetMapping("/{courseLessonId}")
+    public ApiResponse<CourseLessonResponse> getCourseLessonById(
+            @PathVariable String courseId,
+            @PathVariable String courseLessonId
+    ) {
+        return ApiResponse.<CourseLessonResponse>builder()
+                .result(courseLessonService.getCourseLessonById(courseLessonId))
+                .message("Course lesson fetched successfully")
+                .build();
+    }
+
 }

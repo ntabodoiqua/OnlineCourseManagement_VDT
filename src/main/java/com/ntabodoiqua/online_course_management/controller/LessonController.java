@@ -45,6 +45,15 @@ public class LessonController {
                 .build();
     }
 
+    // API lấy bài học theo ID
+    @GetMapping("/{lessonId}")
+    public ApiResponse<LessonResponse> getLessonById(@PathVariable String lessonId) {
+        return ApiResponse.<LessonResponse>builder()
+                .result(lessonService.getLessonById(lessonId))
+                .message("Lesson fetched successfully")
+                .build();
+    }
+
     // API xóa bài học
     @DeleteMapping("/{lessonId}")
     public ApiResponse<String> deleteLesson(@PathVariable String lessonId) {

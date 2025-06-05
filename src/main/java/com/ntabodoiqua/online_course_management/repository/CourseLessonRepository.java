@@ -8,12 +8,16 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CourseLessonRepository extends JpaRepository<CourseLesson, String>, JpaSpecificationExecutor<CourseLesson> {
     List<CourseLesson> findByCourseOrderByOrderIndexAsc(Course course);
     boolean existsByLessonId(String lessonId);
+    Optional<CourseLesson> findByLesson_Id(String lessonId);
     @Transactional
     void deleteByCourseId(String courseId);
     boolean existsByPrerequisiteId(String prerequisiteId);
+    List<CourseLesson> findByCourseAndOrderIndexGreaterThanOrderByOrderIndexAsc(Course course, int orderIndex);
+    long countByCourse(Course course);
 }

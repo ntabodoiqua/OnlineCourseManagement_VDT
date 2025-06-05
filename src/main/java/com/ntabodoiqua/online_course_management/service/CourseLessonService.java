@@ -52,6 +52,20 @@ public class CourseLessonService {
         }
     }
 
+    /*** Helper method: kiểm tra quyền instructor/admin trên lesson ***/
+    private void checkLessonPermission(Lesson lesson) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN"));
+        boolean isInstructor = user.getRoles().stream().anyMatch(r -> r.getName().equals("INSTRUCTOR"));
+        // Assuming Lesson entity has getCreatedBy() returning User who created the lesson
+        boolean isCreator = lesson.getCreatedBy() != null && lesson.getCreatedBy().getUsername().equals(username);
+        if (!isAdmin && !(isInstructor && isCreator)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
     public CourseLessonResponse addLessonToCourse(String courseId, CourseLessonRequest request) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
@@ -59,6 +73,8 @@ public class CourseLessonService {
 
         Lesson lesson = lessonRepository.findById(request.getLessonId())
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        checkLessonPermission(lesson);
+
         // Không cho phép thêm trùng bài học vào cùng một khóa học
         boolean alreadyExists = courseLessonRepository.findByCourseOrderByOrderIndexAsc(course)
                 .stream().anyMatch(cl -> cl.getLesson().getId().equals(lesson.getId()));
@@ -139,11 +155,11 @@ public class CourseLessonService {
     }
 
     public void removeLessonFromCourse(String courseId, String courseLessonId) {
-        CourseLesson courseLesson = courseLessonRepository.findById(courseLessonId)
+        CourseLesson courseLessonToRemove = courseLessonRepository.findById(courseLessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_LESSON_NOT_FOUND));
 
-        checkCoursePermission(courseLesson.getCourse());
-        if (!courseLesson.getCourse().getId().equals(courseId))
+        checkCoursePermission(courseLessonToRemove.getCourse());
+        if (!courseLessonToRemove.getCourse().getId().equals(courseId))
             throw new AppException(ErrorCode.COURSE_LESSON_COURSE_MISMATCH);
 
         // Kiểm tra xem bài học có phải là điều kiện tiên quyết của bài học khác không
@@ -151,18 +167,38 @@ public class CourseLessonService {
             throw new AppException(ErrorCode.COURSE_LESSON_HAS_DEPENDENT);
         }
 
-        Course course = courseLesson.getCourse();
-        courseLessonRepository.delete(courseLesson);
+        Course course = courseLessonToRemove.getCourse();
+        int removedOrderIndex = courseLessonToRemove.getOrderIndex();
+
+        courseLessonRepository.delete(courseLessonToRemove);
+
+        // Cập nhật orderIndex của các bài học đứng sau
+        List<CourseLesson> subsequentLessons = courseLessonRepository
+                .findByCourseAndOrderIndexGreaterThanOrderByOrderIndexAsc(course, removedOrderIndex);
+
+        for (CourseLesson lesson : subsequentLessons) {
+            lesson.setOrderIndex(lesson.getOrderIndex() - 1);
+            courseLessonRepository.save(lesson);
+        }
 
         // Cập nhật tổng số bài học
-        if (course.getTotalLessons() <= 0) {
-            throw new AppException(ErrorCode.COURSE_LESSON_TOTAL_LESSONS_ZERO);
+        Integer currentTotalLessons = course.getTotalLessons();
+        if (currentTotalLessons == null || currentTotalLessons <= 0) {
+            long actualLessonCount = courseLessonRepository.countByCourse(course);
+            course.setTotalLessons((int) actualLessonCount);
+        } else {
+            course.setTotalLessons(currentTotalLessons - 1);
         }
-        course.setTotalLessons(course.getTotalLessons() - 1);
         courseRepository.save(course);
     }
 
     public Page<CourseLessonResponse> getLessonsOfCourse(String courseId, CourseLessonFilterRequest filter, Pageable pageable) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        // For fetching lessons, we might want a different type of permission check (e.g., public published courses for students)
+        // However, sticking to existing strict permission: only admin or instructor-owner can see the lesson list via this service.
+        checkCoursePermission(course);
+
         return courseLessonRepository.findAll(
                 CourseLessonSpecification.withFilter(courseId, filter), pageable
         ).map(courseLessonMapper::toCourseLessonResponse);
@@ -176,5 +212,14 @@ public class CourseLessonService {
             cursor = cursor.getPrerequisite();
         }
         return false;
+    }
+
+    // Lấy thông tin course lesson theo ID
+    public CourseLessonResponse getCourseLessonById(String courseLessonId) {
+        // Kiểm tra xem người dùng có quyền truy cập vào bài học này không
+
+        CourseLesson courseLesson = courseLessonRepository.findById(courseLessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_LESSON_NOT_FOUND));
+        return courseLessonMapper.toCourseLessonResponse(courseLesson);
     }
 }

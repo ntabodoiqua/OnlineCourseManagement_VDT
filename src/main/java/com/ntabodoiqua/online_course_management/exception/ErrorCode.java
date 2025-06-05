@@ -72,7 +72,8 @@ public enum ErrorCode {
     CANNOT_REVIEW_UNCOMPLETED_COURSE(1046, "Cannot review course before completion", HttpStatus.BAD_REQUEST),
     ALREADY_REVIEWED(1047, "You have already reviewed this course", HttpStatus.BAD_REQUEST),
     COURSE_LESSON_TOTAL_LESSONS_ZERO(1048, "Total lessons in course cannot be zero", HttpStatus.BAD_REQUEST),
-    DATA_INTEGRITY_VIOLATION(1049, "Không thể xóa hoặc cập nhật do ràng buộc dữ liệu. Vui lòng kiểm tra các bản ghi liên quan.", HttpStatus.CONFLICT)
+    DATA_INTEGRITY_VIOLATION(1049, "Không thể xóa hoặc cập nhật do ràng buộc dữ liệu. Vui lòng kiểm tra các bản ghi liên quan.", HttpStatus.CONFLICT),
+    LESSON_NOT_ASSIGNED_TO_COURSE(1050, "Lesson is not assigned to any course.", HttpStatus.NOT_FOUND),
     ;
 
 
