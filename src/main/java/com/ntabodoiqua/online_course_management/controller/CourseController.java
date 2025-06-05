@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/courses")
@@ -107,6 +108,23 @@ public class CourseController {
         } catch (JsonProcessingException e) {
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
+    }
+
+    // API toggle trạng thái khóa học (đơn giản)
+    @PatchMapping("/{courseId}/toggle-status")
+    public ApiResponse<CourseResponse> toggleCourseStatus(
+            @PathVariable String courseId,
+            @RequestBody Map<String, Boolean> statusRequest) {
+        Boolean isActive = statusRequest.get("isActive");
+        if (isActive == null) {
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+        
+        CourseResponse courseResponse = courseService.toggleCourseStatus(courseId, isActive);
+        return ApiResponse.<CourseResponse>builder()
+                .message("Course status updated successfully")
+                .result(courseResponse)
+                .build();
     }
 
     

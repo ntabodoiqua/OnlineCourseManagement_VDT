@@ -24,17 +24,6 @@ import java.util.List;
 @Slf4j
 public class CategoryController {
     CategoryService categoryService;
-
-    // Lấy danh sách tất cả các danh mục
-//    @GetMapping()
-//    public ApiResponse<List<CategoryResponse>> getCategories() {
-//        log.info("Fetching all categories");
-//        List<CategoryResponse> categories = categoryService.getAllCategories();
-//        return ApiResponse.<List<CategoryResponse>>builder()
-//                .message("Categories fetched successfully")
-//                .result(categories)
-//                .build();
-//    }
     // Lấy danh sách danh mục với các tham số tìm kiếm
     @GetMapping
     public ApiResponse<Page<CategoryResponse>> getCategories(

@@ -461,14 +461,34 @@ public class CourseService {
      * Xác định user có quyền xem full thông tin course không
      */
     private boolean determineFullAccess(Course course, CourseAccessInfo accessInfo) {
+        // Admin có full access đến tất cả
         if (accessInfo.roles().contains("ROLE_ADMIN")) {
             return true;
         }
 
+        // Instructor có full access đến khóa học của mình
         if (accessInfo.roles().contains("ROLE_INSTRUCTOR")) {
             return course.getInstructor().getUsername().equals(accessInfo.username());
         }
 
+        // User khác chỉ có basic access
         return false;
+    }
+
+    // Service toggle trạng thái khóa học (đơn giản)
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public CourseResponse toggleCourseStatus(String courseId, Boolean isActive) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+
+        checkCoursePermission(course);
+
+        // Cập nhật trạng thái
+        course.setActive(isActive);
+        course.setUpdatedAt(LocalDateTime.now());
+        Course savedCourse = courseRepository.save(course);
+
+        log.info("Toggled course {} status to: {}. Entity isActive before mapping: {}", courseId, isActive, savedCourse.isActive());
+        return courseMapper.toCourseResponse(savedCourse);
     }
 }
