@@ -139,4 +139,13 @@ public class EnrollmentService {
                 .map(enrollmentMapper::toEnrollmentResponse);
     }
 
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public Page<EnrollmentResponse> getApprovedEnrollmentsByCourse(String courseId, Pageable pageable) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+
+        return enrollmentRepository.findByCourseAndApprovalStatus(course, EnrollmentStatus.APPROVED, pageable)
+                .map(enrollmentMapper::toEnrollmentResponse);
+    }
+
 }

@@ -9,4 +9,5 @@ import java.util.List;
 
 @Repository
 public interface LessonRepository extends JpaRepository<Lesson, String>, JpaSpecificationExecutor<Lesson> {
+    boolean existsByTitleAndIdNot(String title, String id);
 }

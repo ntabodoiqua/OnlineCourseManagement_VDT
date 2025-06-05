@@ -74,6 +74,7 @@ public enum ErrorCode {
     COURSE_LESSON_TOTAL_LESSONS_ZERO(1048, "Total lessons in course cannot be zero", HttpStatus.BAD_REQUEST),
     DATA_INTEGRITY_VIOLATION(1049, "Không thể xóa hoặc cập nhật do ràng buộc dữ liệu. Vui lòng kiểm tra các bản ghi liên quan.", HttpStatus.CONFLICT),
     LESSON_NOT_ASSIGNED_TO_COURSE(1050, "Lesson is not assigned to any course.", HttpStatus.NOT_FOUND),
+    LESSON_TITLE_ALREADY_EXISTS(1051, "Lesson title already exists in the course.", HttpStatus.BAD_REQUEST)
     ;
 
 

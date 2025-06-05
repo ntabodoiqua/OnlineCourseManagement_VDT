@@ -47,7 +47,7 @@ public class EnrollmentController {
                 .build();
     }
 
-    // Lấy danh sách Phê duyệt đăng ký
+    // Phê duyệt đăng ký
     @PutMapping("/{enrollmentId}/approve")
     public ApiResponse<String> approve(@PathVariable String enrollmentId) {
         return ApiResponse.<String>builder()
@@ -68,6 +68,14 @@ public class EnrollmentController {
     public ApiResponse<Page<EnrollmentResponse>> getPendingEnrollments(@PathVariable String courseId, Pageable pageable) {
         return ApiResponse.<Page<EnrollmentResponse>>builder()
                 .result(enrollmentService.getPendingEnrollmentsByCourse(courseId, pageable))
+                .build();
+    }
+
+    // Instructor/Admin: Xem danh sách học viên đã duyệt theo khóa học (phân trang)
+    @GetMapping("/approved/course/{courseId}")
+    public ApiResponse<Page<EnrollmentResponse>> getApprovedEnrollments(@PathVariable String courseId, Pageable pageable) {
+        return ApiResponse.<Page<EnrollmentResponse>>builder()
+                .result(enrollmentService.getApprovedEnrollmentsByCourse(courseId, pageable))
                 .build();
     }
 
