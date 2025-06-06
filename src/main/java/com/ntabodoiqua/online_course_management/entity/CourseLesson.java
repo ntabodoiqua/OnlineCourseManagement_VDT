@@ -23,7 +23,7 @@ public class CourseLesson {
     Lesson lesson;
 
     int orderIndex;
-    boolean isVisible;
+    Boolean isVisible;
 
     // Chỉ 1 bài học trước (trong cùng khóa học)
     @ManyToOne

@@ -135,7 +135,7 @@ public class CourseLessonService {
             courseLesson.setOrderIndex(request.getOrderIndex());
         }
         if (request.getIsVisible() != null) {
-            courseLesson.setVisible(request.getIsVisible());
+            courseLesson.setIsVisible(request.getIsVisible());
         }
 
         // Update prerequisite

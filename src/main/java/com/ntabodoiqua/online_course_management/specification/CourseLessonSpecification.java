@@ -17,7 +17,7 @@ public class CourseLessonSpecification {
                 predicates.add(cb.like(cb.lower(root.get("lesson").get("title")), "%" + filter.getLessonTitle().toLowerCase() + "%"));
             }
             if (filter.getIsVisible() != null) {
-                predicates.add(cb.equal(root.get("visible"), filter.getIsVisible()));
+                predicates.add(cb.equal(root.get("isVisible"), filter.getIsVisible()));
             }
             if (filter.getPrerequisiteCourseLessonId() != null) {
                 predicates.add(cb.equal(root.get("prerequisite").get("id"), filter.getPrerequisiteCourseLessonId()));
