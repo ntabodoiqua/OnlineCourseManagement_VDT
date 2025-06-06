@@ -37,6 +37,21 @@ public class CourseReviewController {
                 .build();
     }
 
+    @GetMapping("/public/{courseId}")
+    public ApiResponse<?> getPublicReviewsByCourseId(@PathVariable String courseId, Pageable pageable) {
+        return ApiResponse.<Object>builder()
+                .result(courseReviewService.getPublicReviewsByCourse(courseId, pageable))
+                .build();
+    }
+
+    @GetMapping("/all-for-admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<?> getAllReviewsForAdmin(Pageable pageable) {
+        return ApiResponse.builder()
+                .result(courseReviewService.getAllReviewsForAdmin(pageable))
+                .build();
+    }
+
     // Lấy danh sách đánh giá đã được xử lý cho admin
     @GetMapping("/handled/{courseId}")
     public ApiResponse<?> getHandledReviewsByCourseId(@PathVariable String courseId, Pageable pageable,
@@ -75,4 +90,5 @@ public class CourseReviewController {
                 .message("Review rejected successfully")
                 .build();
     }
+    
 } 

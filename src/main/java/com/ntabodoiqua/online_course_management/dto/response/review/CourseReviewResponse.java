@@ -1,5 +1,6 @@
 package com.ntabodoiqua.online_course_management.dto.response.review;
 
+import com.ntabodoiqua.online_course_management.dto.response.course.CourseResponse;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -19,4 +20,5 @@ public class CourseReviewResponse {
     boolean isApproved;
     boolean isRejected;
     UserResponse student;
+    CourseResponse course;
 }

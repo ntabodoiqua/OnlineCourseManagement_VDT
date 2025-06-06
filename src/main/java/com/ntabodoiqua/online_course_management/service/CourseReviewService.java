@@ -8,6 +8,7 @@ import com.ntabodoiqua.online_course_management.entity.Enrollment;
 import com.ntabodoiqua.online_course_management.entity.User;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.exception.AppException;
+import com.ntabodoiqua.online_course_management.mapper.CourseMapper;
 import com.ntabodoiqua.online_course_management.mapper.UserMapper;
 import com.ntabodoiqua.online_course_management.repository.CourseRepository;
 import com.ntabodoiqua.online_course_management.repository.CourseReviewRepository;
@@ -37,6 +38,7 @@ public class CourseReviewService {
     UserRepository userRepository;
     EnrollmentRepository enrollmentRepository;
     UserMapper userMapper;
+    CourseMapper courseMapper;
     CourseReviewSpecification courseReviewSpecification;
 
     public CourseReviewResponse createReview(CourseReviewRequest request, String courseId) {
@@ -63,10 +65,10 @@ public class CourseReviewService {
                 .isApproved(false) // Chờ duyệt
                 .build();
         courseReviewRepository.save(review);
-        return toResponse(review, student);
+        return toResponse(review);
     }
 
-    private CourseReviewResponse toResponse(CourseReview review, User student) {
+    private CourseReviewResponse toResponse(CourseReview review) {
         return CourseReviewResponse.builder()
                 .id(review.getId())
                 .rating(review.getRating())
@@ -74,7 +76,8 @@ public class CourseReviewService {
                 .reviewDate(review.getReviewDate())
                 .isApproved(review.isApproved())
                 .isRejected(review.isRejected())
-                .student(userMapper.toUserResponse(student))
+                .student(userMapper.toUserResponse(review.getStudent()))
+                .course(courseMapper.toCourseResponse(review.getCourse()))
                 .build();
     }
 
@@ -105,7 +108,16 @@ public class CourseReviewService {
             reviews = courseReviewRepository.findByCourseIdAndIsApprovedTrueAndIsRejectedFalse(courseId, pageable);
         }
 
-        return reviews.map(review -> toResponse(review, review.getStudent()));
+        return reviews.map(this::toResponse);
+    }
+
+    public Page<CourseReviewResponse> getPublicReviewsByCourse(String courseId, Pageable pageable) {
+        courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+
+        Page<CourseReview> reviews = courseReviewRepository.findByCourseIdAndIsApprovedTrue(courseId, pageable);
+
+        return reviews.map(this::toResponse);
     }
 
     // Service lấy đánh giá đã được xử lý của khóa học cho admin và instructor
@@ -118,7 +130,7 @@ public class CourseReviewService {
         Specification<CourseReview> spec = courseReviewSpecification.findHandledReviews(courseId, isRejected, startDate, endDate);
 
         Page<CourseReview> reviews = courseReviewRepository.findAll(spec, pageable);
-        return reviews.map(review -> toResponse(review, review.getStudent()));
+        return reviews.map(this::toResponse);
     }
 
     // Service lấy đánh giá chưa được duyệt của khóa học cho admin và instructor
@@ -131,7 +143,7 @@ public class CourseReviewService {
         // Lấy tất cả đánh giá chưa được duyệt
         Page<CourseReview> reviews = courseReviewRepository.findByCourseIdAndIsApprovedFalse(courseId, pageable);
 
-        return reviews.map(review -> toResponse(review, review.getStudent()));
+        return reviews.map(this::toResponse);
     }
 
     // Service phê duyệt đánh giá của khóa học
@@ -156,7 +168,7 @@ public class CourseReviewService {
         review.setRejected(false);
         courseReviewRepository.save(review);
 
-        return toResponse(review, review.getStudent());
+        return toResponse(review);
     }
 
     // Service từ chối đánh giá của khóa học
@@ -181,6 +193,12 @@ public class CourseReviewService {
         review.setApproved(true);
         courseReviewRepository.save(review);
 
-        return toResponse(review, review.getStudent());
+        return toResponse(review);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<CourseReviewResponse> getAllReviewsForAdmin(Pageable pageable) {
+        Page<CourseReview> reviews = courseReviewRepository.findAll(pageable);
+        return reviews.map(this::toResponse);
     }
 } 

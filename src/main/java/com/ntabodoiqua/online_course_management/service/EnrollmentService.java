@@ -148,4 +148,10 @@ public class EnrollmentService {
                 .map(enrollmentMapper::toEnrollmentResponse);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<EnrollmentResponse> getAllEnrollmentsForAdmin(Pageable pageable) {
+        return enrollmentRepository.findAll(pageable)
+                .map(enrollmentMapper::toEnrollmentResponse);
+    }
+
 }

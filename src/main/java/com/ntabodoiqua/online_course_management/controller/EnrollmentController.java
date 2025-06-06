@@ -10,6 +10,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -76,6 +77,14 @@ public class EnrollmentController {
     public ApiResponse<Page<EnrollmentResponse>> getApprovedEnrollments(@PathVariable String courseId, Pageable pageable) {
         return ApiResponse.<Page<EnrollmentResponse>>builder()
                 .result(enrollmentService.getApprovedEnrollmentsByCourse(courseId, pageable))
+                .build();
+    }
+
+    @GetMapping("/all-for-admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Page<EnrollmentResponse>> getAllEnrollmentsForAdmin(Pageable pageable) {
+        return ApiResponse.<Page<EnrollmentResponse>>builder()
+                .result(enrollmentService.getAllEnrollmentsForAdmin(pageable))
                 .build();
     }
 
