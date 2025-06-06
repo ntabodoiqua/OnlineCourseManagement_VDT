@@ -45,7 +45,9 @@ public class FileStorageService {
             String baseDir = isPublic ? properties.getPublicDir() : properties.getPrivateDir();
             Path dir = Paths.get(baseDir).toAbsolutePath().normalize();
             Files.createDirectories(dir);
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String originalFileName = file.getOriginalFilename();
+            String sanitizedFileName = originalFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String fileName = UUID.randomUUID() + "_" + sanitizedFileName;
             Path targetLocation = dir.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
             log.info("File stored successfully: {}", fileName);

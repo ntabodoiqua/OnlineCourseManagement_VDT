@@ -39,24 +39,8 @@ public class FileController {
     @PostMapping("/upload")
     public ApiResponse<String> upload(@RequestParam("file") MultipartFile file,
                                       @RequestParam boolean isPublic) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User uploader = userRepository.findByUsername(username).orElseThrow(
-                () -> new AppException(ErrorCode.USER_NOT_EXISTED)
-        );
         String fileName = fileStorageService.storeFile(file, isPublic);
-
-        UploadedFile uploadedFile = UploadedFile.builder()
-                .fileName(fileName)
-                .originalFileName(file.getOriginalFilename())
-                .contentType(file.getContentType())
-                .isPublic(isPublic)
-                .uploadedAt(LocalDateTime.now())
-                .uploadedBy(uploader)
-                .build();
-
-        // Lưu vào csdl
-        uploadedFileRepository.save(uploadedFile);
-        log.info("File uploaded: {}", fileName);
+        log.info("File upload process initiated for: {}", fileName);
         return ApiResponse.<String>builder()
                 .result("File uploaded successfully: " + fileName)
                 .build();
