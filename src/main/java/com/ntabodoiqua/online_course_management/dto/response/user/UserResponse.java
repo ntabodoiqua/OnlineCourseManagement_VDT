@@ -23,6 +23,7 @@ public class UserResponse {
     String avatarUrl;
     String email;
     String phone;
+    String bio;
     Gender gender;
     LocalDateTime createdAt;
     Set<RoleResponse> roles;

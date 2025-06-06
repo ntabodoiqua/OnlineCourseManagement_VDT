@@ -139,7 +139,7 @@ public class UserService {
         }
 
         String fileName = fileStorageService.storeFile(file, true);
-        String avatarUrl = "/files/public/" + fileName;
+        String avatarUrl = "/uploads/public/" + fileName;
 
         user.setAvatarUrl(avatarUrl);
         userRepository.save(user);
