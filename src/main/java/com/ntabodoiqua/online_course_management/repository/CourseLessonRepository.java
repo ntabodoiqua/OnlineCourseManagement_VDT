@@ -2,6 +2,7 @@ package com.ntabodoiqua.online_course_management.repository;
 
 import com.ntabodoiqua.online_course_management.entity.Course;
 import com.ntabodoiqua.online_course_management.entity.CourseLesson;
+import com.ntabodoiqua.online_course_management.entity.Lesson;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -15,6 +16,7 @@ public interface CourseLessonRepository extends JpaRepository<CourseLesson, Stri
     List<CourseLesson> findByCourseOrderByOrderIndexAsc(Course course);
     boolean existsByLessonId(String lessonId);
     Optional<CourseLesson> findByLesson_Id(String lessonId);
+    List<CourseLesson> findByLesson(Lesson lesson);
     @Transactional
     void deleteByCourseId(String courseId);
     boolean existsByPrerequisiteId(String prerequisiteId);

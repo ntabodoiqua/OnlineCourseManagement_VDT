@@ -15,7 +15,6 @@ public interface CourseMapper {
     Course toCourse(CourseCreationRequest request);
 
     // Map Course entity to CourseResponse DTO
-    @Mapping(source = "active", target = "isActive")
     CourseResponse toCourseResponse(Course course);
 
     // Cập nhật thông tin từ update request vào Course entity

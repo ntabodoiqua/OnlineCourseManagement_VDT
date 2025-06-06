@@ -76,7 +76,12 @@ public enum ErrorCode {
     LESSON_NOT_ASSIGNED_TO_COURSE(1050, "Lesson is not assigned to any course.", HttpStatus.NOT_FOUND),
     LESSON_TITLE_ALREADY_EXISTS(1051, "Lesson title already exists in the course.", HttpStatus.BAD_REQUEST),
     COURSE_REVIEW_NOT_EXISTED(1052, "Course review not existed", HttpStatus.NOT_FOUND),
-    FILE_DELETION_FAILED(1053, "File deletion failed", HttpStatus.INTERNAL_SERVER_ERROR),;
+    FILE_DELETION_FAILED(1053, "File deletion failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    
+    // Lỗi tài liệu
+    DOCUMENT_NOT_FOUND(1054, "Document not found", HttpStatus.NOT_FOUND),
+    INVALID_FILE(1055, "Invalid file", HttpStatus.BAD_REQUEST),
+    ACCESS_DENIED(1056, "Access denied", HttpStatus.FORBIDDEN),;
 
 
 

@@ -517,4 +517,44 @@ public class CourseService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Đồng bộ lại trường totalLessons cho tất cả courses dựa trên số lượng bài học thực tế
+     * Phương thức này nên được gọi khi có sự không nhất quán trong dữ liệu
+     */
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public void syncAllCoursesTotalLessons() {
+        List<Course> allCourses = courseRepository.findAll();
+        for (Course course : allCourses) {
+            long actualLessonCount = courseLessonRepository.countByCourse(course);
+            if (course.getTotalLessons() != (int) actualLessonCount) {
+                log.info("Syncing totalLessons for course {}: {} -> {}", 
+                    course.getId(), course.getTotalLessons(), actualLessonCount);
+                course.setTotalLessons((int) actualLessonCount);
+                courseRepository.save(course);
+            }
+        }
+        log.info("Completed syncing totalLessons for all courses");
+    }
+
+    /**
+     * Đồng bộ lại trường totalLessons cho một course cụ thể
+     */
+    @Transactional
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public void syncCourseTotalLessons(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        
+        checkCoursePermission(course);
+        
+        long actualLessonCount = courseLessonRepository.countByCourse(course);
+        if (course.getTotalLessons() != (int) actualLessonCount) {
+            log.info("Syncing totalLessons for course {}: {} -> {}", 
+                courseId, course.getTotalLessons(), actualLessonCount);
+            course.setTotalLessons((int) actualLessonCount);
+            courseRepository.save(course);
+        }
+    }
 }

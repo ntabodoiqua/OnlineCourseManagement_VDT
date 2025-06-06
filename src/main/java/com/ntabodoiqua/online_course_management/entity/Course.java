@@ -47,4 +47,7 @@ public class Course {
     boolean requiresApproval;
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     Set<CourseLesson> courseLessons;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    Set<CourseDocument> courseDocuments;
 }
