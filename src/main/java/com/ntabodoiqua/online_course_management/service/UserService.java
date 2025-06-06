@@ -176,13 +176,21 @@ public class UserService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // Kiểm tra trùng email
-        if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+        // Nếu email trong request khác với email hiện tại của user
+        // và email đó đã tồn tại trong hệ thống (của người dùng khác)
+        String newEmail = request.getEmail();
+        String currentEmail = user.getEmail();
+
+        if (!newEmail.equalsIgnoreCase(currentEmail) && userRepository.existsByEmail(newEmail)) {
             throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
 
-        // Kiểm tra trùng số điện thoại
-        if (!user.getPhone().equals(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
+        // Nếu số điện thoại trong request khác với số hiện tại của user
+        // và số điện thoại đó đã tồn tại trong hệ thống (của người dùng khác)
+        String newPhone = request.getPhone();
+        String currentPhone = user.getPhone();
+
+        if (!newPhone.equals(currentPhone) && userRepository.existsByPhone(newPhone)) {
             throw new AppException(ErrorCode.PHONE_EXISTED);
         }
 
