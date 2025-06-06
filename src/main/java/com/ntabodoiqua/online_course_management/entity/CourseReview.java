@@ -42,4 +42,5 @@ public class CourseReview {
 
     LocalDate reviewDate; // Ngày đánh giá
     boolean isApproved; // Đánh giá đã được phê duyệt hay chưa
+    boolean isRejected; // Đã bị từ chối hay chưa
 }

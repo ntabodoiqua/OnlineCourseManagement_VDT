@@ -6,6 +6,7 @@ import com.ntabodoiqua.online_course_management.dto.request.lesson.CourseLessonF
 import com.ntabodoiqua.online_course_management.dto.response.course.CourseLessonResponse;
 import com.ntabodoiqua.online_course_management.entity.Course;
 import com.ntabodoiqua.online_course_management.entity.CourseLesson;
+import com.ntabodoiqua.online_course_management.entity.Enrollment;
 import com.ntabodoiqua.online_course_management.entity.Lesson;
 import com.ntabodoiqua.online_course_management.entity.User;
 import com.ntabodoiqua.online_course_management.exception.AppException;
@@ -13,6 +14,7 @@ import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.CourseLessonMapper;
 import com.ntabodoiqua.online_course_management.repository.CourseLessonRepository;
 import com.ntabodoiqua.online_course_management.repository.CourseRepository;
+import com.ntabodoiqua.online_course_management.repository.EnrollmentRepository;
 import com.ntabodoiqua.online_course_management.repository.LessonRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
 import com.ntabodoiqua.online_course_management.specification.CourseLessonSpecification;
@@ -38,6 +40,8 @@ public class CourseLessonService {
     CourseLessonRepository courseLessonRepository;
     CourseLessonMapper courseLessonMapper;
     UserRepository userRepository;
+    EnrollmentRepository enrollmentRepository;
+    ProgressService progressService;
 
     /*** Helper method: kiểm tra quyền instructor/admin trên course ***/
     private void checkCoursePermission(Course course) {
@@ -111,6 +115,9 @@ public class CourseLessonService {
         // Cập nhật tổng số bài học
         course.setTotalLessons(course.getTotalLessons() + 1);
         courseRepository.save(course);
+
+        // Cập nhật progress cho tất cả enrollment của course
+        updateProgressForAllEnrollmentsInCourse(course);
 
         return courseLessonMapper.toCourseLessonResponse(courseLesson);
     }
@@ -190,6 +197,9 @@ public class CourseLessonService {
             course.setTotalLessons(currentTotalLessons - 1);
         }
         courseRepository.save(course);
+
+        // Cập nhật progress cho tất cả enrollment của course
+        updateProgressForAllEnrollmentsInCourse(course);
     }
 
     public Page<CourseLessonResponse> getLessonsOfCourse(String courseId, CourseLessonFilterRequest filter, Pageable pageable) {
@@ -212,6 +222,13 @@ public class CourseLessonService {
             cursor = cursor.getPrerequisite();
         }
         return false;
+    }
+
+    private void updateProgressForAllEnrollmentsInCourse(Course course) {
+        List<Enrollment> enrollments = enrollmentRepository.findByCourse(course);
+        for (Enrollment enrollment : enrollments) {
+            progressService.recalculateAndSaveEnrollmentProgress(enrollment);
+        }
     }
 
     // Lấy thông tin course lesson theo ID

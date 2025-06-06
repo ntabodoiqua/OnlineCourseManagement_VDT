@@ -20,4 +20,5 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String> 
     Page<Enrollment> findByCourseAndApprovalStatus(Course course, EnrollmentStatus status, Pageable pageable);
     List<Enrollment> findByStudent(User student);
     void deleteByCourseId(String courseId);
+    List<Enrollment> findByCourse(Course course);
 }

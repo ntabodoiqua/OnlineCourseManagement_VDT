@@ -15,13 +15,13 @@ import com.ntabodoiqua.online_course_management.repository.EnrollmentRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -67,13 +67,14 @@ public class CourseReviewService {
                 .comment(review.getComment())
                 .reviewDate(review.getReviewDate())
                 .isApproved(review.isApproved())
+                .isRejected(review.isRejected())
                 .student(userMapper.toUserResponse(student))
                 .build();
     }
 
     // Lấy tất cả đánh giá của khóa học
     @PreAuthorize("hasRole('STUDENT') or hasRole('INSTRUCTOR') or hasRole('ADMIN')")
-    public List<CourseReviewResponse> getReviewsByCourse(String courseId) {
+    public Page<CourseReviewResponse> getReviewsByCourse(String courseId, Pageable pageable) {
         // Kiểm tra tồn tại khóa học
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
@@ -89,17 +90,91 @@ public class CourseReviewService {
         boolean isCourseInstructor = course.getInstructor().getId().equals(currentUser.getId());
 
         // Lấy danh sách review dựa trên quyền
-        List<CourseReview> reviews;
+        Page<CourseReview> reviews;
         if (isAdmin || (isInstructor && isCourseInstructor)) {
             // Admin và instructor của khóa học có thể xem tất cả review
-            reviews = courseReviewRepository.findByCourseId(courseId);
+            reviews = courseReviewRepository.findByCourseId(courseId, pageable);
         } else {
-            // User thường chỉ xem được review đã được duyệt
-            reviews = courseReviewRepository.findByCourseIdAndIsApprovedTrue(courseId);
+            // User thường chỉ xem được review đã được duyệt và đồng ý hiển thị
+            reviews = courseReviewRepository.findByCourseIdAndIsApprovedTrueAndIsRejectedFalse(courseId, pageable);
         }
 
-        return reviews.stream()
-                .map(review -> toResponse(review, review.getStudent()))
-                .collect(Collectors.toList());
+        return reviews.map(review -> toResponse(review, review.getStudent()));
+    }
+
+    // Service lấy đánh giá đã được duyệt của khóa học cho admin và instructor
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('INSTRUCTOR') and @courseService.isInstructorOfCourse(#courseId))")
+    public Page<CourseReviewResponse> getApprovedReviewsByCourseForAdmin(String courseId, Pageable pageable) {
+        // Kiểm tra tồn tại khóa học
+        courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+
+        // Lấy tất cả đánh giá đã được duyệt
+        Page<CourseReview> reviews = courseReviewRepository.findByCourseIdAndIsApprovedTrue(courseId, pageable);
+
+        return reviews.map(review -> toResponse(review, review.getStudent()));
+    }
+
+    // Service lấy đánh giá chưa được duyệt của khóa học cho admin và instructor
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('INSTRUCTOR') and @courseService.isInstructorOfCourse(#courseId))")
+    public Page<CourseReviewResponse> getPendingReviewsByCourse(String courseId, Pageable pageable) {
+        // Kiểm tra tồn tại khóa học
+        courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+
+        // Lấy tất cả đánh giá chưa được duyệt
+        Page<CourseReview> reviews = courseReviewRepository.findByCourseIdAndIsApprovedFalse(courseId, pageable);
+
+        return reviews.map(review -> toResponse(review, review.getStudent()));
+    }
+
+    // Service phê duyệt đánh giá của khóa học
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public CourseReviewResponse approveReview(String reviewId) {
+        // Kiểm tra tồn tại đánh giá
+        CourseReview review = courseReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_REVIEW_NOT_EXISTED));
+
+        // Chỉ admin hoặc instructor của khóa học mới có quyền phê duyệt
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (!currentUser.getRoles().stream().anyMatch(role -> role.getName().equals("ADMIN")) &&
+            !review.getCourse().getInstructor().getId().equals(currentUser.getId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Phê duyệt đánh giá
+        review.setApproved(true);
+        review.setRejected(false);
+        courseReviewRepository.save(review);
+
+        return toResponse(review, review.getStudent());
+    }
+
+    // Service từ chối đánh giá của khóa học
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public CourseReviewResponse rejectReview(String reviewId) {
+        // Kiểm tra tồn tại đánh giá
+        CourseReview review = courseReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_REVIEW_NOT_EXISTED));
+
+        // Chỉ admin hoặc instructor của khóa học mới có quyền từ chối
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (!currentUser.getRoles().stream().anyMatch(role -> role.getName().equals("ADMIN")) &&
+            !review.getCourse().getInstructor().getId().equals(currentUser.getId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Từ chối đánh giá
+        review.setRejected(true);
+        review.setApproved(true);
+        courseReviewRepository.save(review);
+
+        return toResponse(review, review.getStudent());
     }
 } 

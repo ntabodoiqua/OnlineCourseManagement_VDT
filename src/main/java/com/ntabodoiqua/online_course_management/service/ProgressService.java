@@ -43,8 +43,16 @@ public class ProgressService {
         progress.setCompleted(request.isCompleted());
         progress.setCompletionDate(request.isCompleted() ? LocalDate.now() : null);
         progressRepository.save(progress);
+
+        recalculateAndSaveEnrollmentProgress(enrollment);
+
+        return toResponse(progress);
+    }
+
+    @Transactional
+    public void recalculateAndSaveEnrollmentProgress(Enrollment enrollment) {
         // Cập nhật progress tổng thể cho enrollment
-        long completed = progressRepository.countByEnrollmentIdAndIsCompletedTrue(request.getEnrollmentId());
+        long completed = progressRepository.countByEnrollmentIdAndIsCompletedTrue(enrollment.getId());
         int total = enrollment.getCourse().getTotalLessons();
         enrollment.setProgress(total > 0 ? (double) completed / total : 0.0);
         if (completed == total && total > 0) {
@@ -55,7 +63,6 @@ public class ProgressService {
             enrollment.setCompletionDate(null);
         }
         enrollmentRepository.save(enrollment);
-        return toResponse(progress);
     }
 
     private ProgressResponse toResponse(Progress progress) {

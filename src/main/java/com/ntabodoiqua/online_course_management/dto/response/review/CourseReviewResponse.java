@@ -17,6 +17,6 @@ public class CourseReviewResponse {
     String comment;
     LocalDate reviewDate;
     boolean isApproved;
-
+    boolean isRejected;
     UserResponse student;
 }

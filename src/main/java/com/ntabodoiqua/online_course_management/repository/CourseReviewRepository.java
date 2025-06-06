@@ -1,18 +1,24 @@
 package com.ntabodoiqua.online_course_management.repository;
 
 import com.ntabodoiqua.online_course_management.entity.CourseReview;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 public interface CourseReviewRepository extends JpaRepository<CourseReview, String> {
 
     boolean existsByStudentIdAndCourseId(String studentId, String courseId);
 
-    List<CourseReview> findByCourseId(String courseId);
+    Page<CourseReview> findByCourseId(String courseId, Pageable pageable);
 
-    List<CourseReview> findByCourseIdAndIsApprovedTrue(String courseId);
+    Page<CourseReview> findByCourseIdAndIsApprovedTrue(String courseId, Pageable pageable);
+
+    Page<CourseReview> findByCourseIdAndIsApprovedTrueAndIsRejectedFalse(String courseId, Pageable pageable);
+
+
     void deleteByCourseId(String courseId);
+
+    Page<CourseReview> findByCourseIdAndIsApprovedFalse(String courseId, Pageable pageable);
 }
