@@ -7,6 +7,7 @@ import com.ntabodoiqua.online_course_management.enums.EnrollmentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -21,4 +22,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String> 
     List<Enrollment> findByStudent(User student);
     void deleteByCourseId(String courseId);
     List<Enrollment> findByCourse(Course course);
+
+    @Query("SELECT e.course.id, COUNT(e.course.id) as enrollmentCount FROM Enrollment e GROUP BY e.course.id ORDER BY enrollmentCount DESC")
+    Page<Object[]> findPopularCourseIds(Pageable pageable);
 }

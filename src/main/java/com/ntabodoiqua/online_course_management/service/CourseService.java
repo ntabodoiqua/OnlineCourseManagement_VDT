@@ -31,7 +31,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import com.ntabodoiqua.online_course_management.dto.response.course.PopularCourseResponse;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -490,5 +494,27 @@ public class CourseService {
 
         log.info("Toggled course {} status to: {}. Entity isActive before mapping: {}", courseId, isActive, savedCourse.isActive());
         return courseMapper.toCourseResponse(savedCourse);
+    }
+
+    public List<PopularCourseResponse> getPopularCourses(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        Page<Object[]> popularCourseData = enrollmentRepository.findPopularCourseIds(pageable);
+
+        return popularCourseData.getContent().stream()
+                .map(result -> {
+                    String courseId = (String) result[0];
+                    Long enrollmentCount = (Long) result[1];
+                    Course course = courseRepository.findById(courseId)
+                            .orElse(null);
+                    if (course != null) {
+                        return PopularCourseResponse.builder()
+                                .course(courseMapper.toCourseResponse(course))
+                                .enrollmentCount(enrollmentCount)
+                                .build();
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 }

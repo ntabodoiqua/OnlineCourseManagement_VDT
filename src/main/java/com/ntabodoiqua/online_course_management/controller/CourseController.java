@@ -22,8 +22,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.ntabodoiqua.online_course_management.dto.response.course.PopularCourseResponse;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -75,14 +78,19 @@ public class CourseController {
     // API lấy thông tin chi tiết của một khóa học theo ID
     @GetMapping("/{courseId}")
     public ApiResponse<CourseResponse> getCourseById(@PathVariable String courseId) {
-        CourseResponse courseResponse = courseService.getCourseById(courseId);
-        return ApiResponse.<CourseResponse>builder()
-                .result(courseResponse)
+        return ApiResponse.<CourseResponse>builder().result(courseService.getCourseById(courseId)).build();
+    }
+
+    @GetMapping("/public/popular")
+    public ApiResponse<List<PopularCourseResponse>> getPopularCourses(@RequestParam(defaultValue = "5") int limit) {
+        return ApiResponse.<List<PopularCourseResponse>>builder()
+                .result(courseService.getPopularCourses(limit))
                 .build();
     }
 
     // API xóa khóa học theo ID
     @DeleteMapping("/{courseId}")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
     public ApiResponse<String> deleteCourse(@PathVariable String courseId) {
         courseService.deleteCourse(courseId);
         return ApiResponse.<String>builder()
