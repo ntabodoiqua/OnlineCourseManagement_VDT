@@ -13,15 +13,20 @@ import com.ntabodoiqua.online_course_management.repository.CourseRepository;
 import com.ntabodoiqua.online_course_management.repository.CourseReviewRepository;
 import com.ntabodoiqua.online_course_management.repository.EnrollmentRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.specification.CourseReviewSpecification;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +37,7 @@ public class CourseReviewService {
     UserRepository userRepository;
     EnrollmentRepository enrollmentRepository;
     UserMapper userMapper;
+    CourseReviewSpecification courseReviewSpecification;
 
     public CourseReviewResponse createReview(CourseReviewRequest request, String courseId) {
         // Kiểm tra tồn tại user, course, enrollment
@@ -95,23 +101,23 @@ public class CourseReviewService {
             // Admin và instructor của khóa học có thể xem tất cả review
             reviews = courseReviewRepository.findByCourseId(courseId, pageable);
         } else {
-            // User thường chỉ xem được review đã được duyệt và đồng ý hiển thị
+            // User thường chỉ xem được review đã được duyệt và không bị từ chối
             reviews = courseReviewRepository.findByCourseIdAndIsApprovedTrueAndIsRejectedFalse(courseId, pageable);
         }
 
         return reviews.map(review -> toResponse(review, review.getStudent()));
     }
 
-    // Service lấy đánh giá đã được duyệt của khóa học cho admin và instructor
+    // Service lấy đánh giá đã được xử lý của khóa học cho admin và instructor
     @PreAuthorize("hasRole('ADMIN') or (hasRole('INSTRUCTOR') and @courseService.isInstructorOfCourse(#courseId))")
-    public Page<CourseReviewResponse> getApprovedReviewsByCourseForAdmin(String courseId, Pageable pageable) {
+    public Page<CourseReviewResponse> getHandledReviewsByCourse(String courseId, Pageable pageable, Boolean isRejected, LocalDate startDate, LocalDate endDate) {
         // Kiểm tra tồn tại khóa học
         courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
 
-        // Lấy tất cả đánh giá đã được duyệt
-        Page<CourseReview> reviews = courseReviewRepository.findByCourseIdAndIsApprovedTrue(courseId, pageable);
+        Specification<CourseReview> spec = courseReviewSpecification.findHandledReviews(courseId, isRejected, startDate, endDate);
 
+        Page<CourseReview> reviews = courseReviewRepository.findAll(spec, pageable);
         return reviews.map(review -> toResponse(review, review.getStudent()));
     }
 

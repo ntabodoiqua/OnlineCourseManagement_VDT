@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 @RestController
 @RequestMapping("/course-reviews")
 @RequiredArgsConstructor
@@ -35,11 +37,14 @@ public class CourseReviewController {
                 .build();
     }
 
-    // Lấy danh sách đánh giá đã được phê duyệt cho admin
-    @GetMapping("/approved/{courseId}")
-    public ApiResponse<?> getApprovedReviewsByCourseId(@PathVariable String courseId, Pageable pageable) {
+    // Lấy danh sách đánh giá đã được xử lý cho admin
+    @GetMapping("/handled/{courseId}")
+    public ApiResponse<?> getHandledReviewsByCourseId(@PathVariable String courseId, Pageable pageable,
+                                                      @RequestParam(required = false) Boolean isRejected,
+                                                      @RequestParam(required = false) LocalDate startDate,
+                                                      @RequestParam(required = false) LocalDate endDate) {
         return ApiResponse.<Object>builder()
-                .result(courseReviewService.getApprovedReviewsByCourseForAdmin(courseId, pageable))
+                .result(courseReviewService.getHandledReviewsByCourse(courseId, pageable, isRejected, startDate, endDate))
                 .build();
     }
 
