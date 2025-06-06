@@ -27,17 +27,18 @@ public class CourseSpecification {
             }
 
             if (filter.getInstructorName() != null && !filter.getInstructorName().trim().isEmpty()) {
-                // Tìm theo firstName hoặc lastName hoặc fullName
-                Predicate firstNamePredicate = cb.like(cb.lower(root.get("instructor").get("firstName")),
-                        "%" + filter.getInstructorName().toLowerCase().trim() + "%");
-                Predicate lastNamePredicate = cb.like(cb.lower(root.get("instructor").get("lastName")),
-                        "%" + filter.getInstructorName().toLowerCase().trim() + "%");
+                // Tìm theo firstName, lastName, fullName hoặc username
+                String searchTerm = "%" + filter.getInstructorName().toLowerCase().trim() + "%";
+
+                Predicate firstNamePredicate = cb.like(cb.lower(root.get("instructor").get("firstName")), searchTerm);
+                Predicate lastNamePredicate = cb.like(cb.lower(root.get("instructor").get("lastName")), searchTerm);
+                Predicate usernamePredicate = cb.like(cb.lower(root.get("instructor").get("username")), searchTerm);
                 Predicate fullNamePredicate = cb.like(cb.lower(
                                 cb.concat(cb.concat(root.get("instructor").get("firstName"), " "),
                                         root.get("instructor").get("lastName"))),
-                        "%" + filter.getInstructorName().toLowerCase().trim() + "%");
+                        searchTerm);
 
-                predicates.add(cb.or(firstNamePredicate, lastNamePredicate, fullNamePredicate));
+                predicates.add(cb.or(firstNamePredicate, lastNamePredicate, fullNamePredicate, usernamePredicate));
             }
 
             if (filter.getIsActive() != null) {

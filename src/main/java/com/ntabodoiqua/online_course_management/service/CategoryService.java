@@ -2,6 +2,7 @@ package com.ntabodoiqua.online_course_management.service;
 
 import com.ntabodoiqua.online_course_management.dto.request.course.CategoryRequest;
 import com.ntabodoiqua.online_course_management.dto.request.course.CategorySearchRequest;
+import com.ntabodoiqua.online_course_management.dto.request.category.CategoryFilterRequest;
 import com.ntabodoiqua.online_course_management.dto.response.course.CategoryResponse;
 import com.ntabodoiqua.online_course_management.entity.Category;
 import com.ntabodoiqua.online_course_management.entity.User;
@@ -10,6 +11,7 @@ import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.CategoryMapper;
 import com.ntabodoiqua.online_course_management.repository.CategoryRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.specification.CategorySpecification;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -143,26 +145,8 @@ public class CategoryService {
     }
 
     // Service để tìm kiếm danh mục khóa học theo các tiêu chí
-    public Page<CategoryResponse> searchCategories(CategorySearchRequest request) {
-        Sort sort = Sort.by(Sort.Direction.fromString(request.getDirection()), request.getSortBy());
-        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
-
-        Specification<Category> spec = Specification.where(null);
-
-        if (request.getName() != null)
-            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("name")), "%" + request.getName().toLowerCase() + "%"));
-
-        if (request.getDescription() != null)
-            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("description")), "%" + request.getDescription().toLowerCase() + "%"));
-
-        if (request.getCreatedBy() != null)
-            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("createdBy").get("username")), "%" + request.getCreatedBy().toLowerCase() + "%"));
-
-        if (request.getFrom() != null && request.getTo() != null)
-            spec = spec.and((root, query, cb) -> cb.between(root.get("createdAt"),
-                    request.getFrom().atStartOfDay(),
-                    request.getTo().atTime(23, 59, 59)));
-
+    public Page<CategoryResponse> searchCategories(CategoryFilterRequest filter, Pageable pageable) {
+        Specification<Category> spec = CategorySpecification.withFilter(filter);
         Page<Category> resultPage = categoryRepository.findAll(spec, pageable);
         return resultPage.map(categoryMapper::toCategoryResponse);
     }

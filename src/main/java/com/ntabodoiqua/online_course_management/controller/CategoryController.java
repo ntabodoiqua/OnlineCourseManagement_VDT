@@ -1,8 +1,8 @@
 package com.ntabodoiqua.online_course_management.controller;
 
 import com.ntabodoiqua.online_course_management.dto.request.ApiResponse;
+import com.ntabodoiqua.online_course_management.dto.request.category.CategoryFilterRequest;
 import com.ntabodoiqua.online_course_management.dto.request.course.CategoryRequest;
-import com.ntabodoiqua.online_course_management.dto.request.course.CategorySearchRequest;
 import com.ntabodoiqua.online_course_management.dto.response.course.CategoryResponse;
 import com.ntabodoiqua.online_course_management.service.CategoryService;
 import jakarta.validation.Valid;
@@ -11,11 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/category")
@@ -24,34 +21,14 @@ import java.util.List;
 @Slf4j
 public class CategoryController {
     CategoryService categoryService;
-    // Lấy danh sách danh mục với các tham số tìm kiếm
+    // Lấy danh sách danh mục với các tham số tìm kiếm và phân trang
     @GetMapping
     public ApiResponse<Page<CategoryResponse>> getCategories(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) String createdBy,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction
-    ) {
-        CategorySearchRequest request = CategorySearchRequest.builder()
-                .name(name)
-                .description(description)
-                .createdBy(createdBy)
-                .from(from)
-                .to(to)
-                .page(page)
-                .size(size)
-                .sortBy(sortBy)
-                .direction(direction)
-                .build();
+            @ModelAttribute CategoryFilterRequest filter,
+            Pageable pageable) {
 
-        Page<CategoryResponse> categories = categoryService.searchCategories(request);
+        Page<CategoryResponse> categories = categoryService.searchCategories(filter, pageable);
         return ApiResponse.<Page<CategoryResponse>>builder()
-                .message("Categories fetched successfully")
                 .result(categories)
                 .build();
     }
@@ -100,7 +77,4 @@ public class CategoryController {
                 .result(category)
                 .build();
     }
-
-
-
 }
