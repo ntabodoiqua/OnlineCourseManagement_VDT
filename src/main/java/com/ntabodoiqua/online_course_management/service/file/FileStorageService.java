@@ -6,12 +6,15 @@ import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.repository.UploadedFileRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.specification.UploadedFileSpecification;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.file.ConfigurationSource;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -124,5 +128,42 @@ public class FileStorageService {
                 .filter(file -> file.getContentType() != null && file.getContentType().startsWith("image/"))
                 .map(file -> "/uploads/public/" + file.getFileName())
                 .toList();
+    }
+
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public void deleteFile(String fileName) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        UploadedFile uploadedFile = uploadedFileRepository.findByFileName(fileName)
+                .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
+
+        if (!uploadedFile.getUploadedBy().equals(user)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        try {
+            String baseDir = uploadedFile.isPublic() ? properties.getPublicDir() : properties.getPrivateDir();
+            Path filePath = Paths.get(baseDir).resolve(fileName).normalize();
+            Files.deleteIfExists(filePath);
+            uploadedFileRepository.delete(uploadedFile);
+            log.info("File deleted successfully: {}", fileName);
+        } catch (IOException e) {
+            log.error("Could not delete file: {}", fileName, e);
+            throw new AppException(ErrorCode.FILE_DELETION_FAILED);
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public Page<UploadedFile> getAllFilesOfUser(String contentType, String fileName, Pageable pageable) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        return uploadedFileRepository.findAll(
+                UploadedFileSpecification.withFilter(user, contentType, fileName),
+                pageable
+        );
     }
 }

@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -103,6 +105,28 @@ public class FileController {
         return ApiResponse.<List<String>>builder()
                 .message("Public images fetched successfully")
                 .result(imageUrls)
+                .build();
+    }
+
+    @DeleteMapping("/{fileName}")
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public ApiResponse<Void> deleteFile(@PathVariable String fileName) {
+        fileStorageService.deleteFile(fileName);
+        return ApiResponse.<Void>builder()
+                .message("File deleted successfully")
+                .build();
+    }
+
+    @GetMapping("/all-files-of-user")
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public ApiResponse<Page<UploadedFile>> getAllFilesOfUser(
+            @RequestParam(required = false) String contentType,
+            @RequestParam(required = false) String fileName,
+            Pageable pageable) {
+        Page<UploadedFile> files = fileStorageService.getAllFilesOfUser(contentType, fileName, pageable);
+        return ApiResponse.<Page<UploadedFile>>builder()
+                .message("Files fetched successfully")
+                .result(files)
                 .build();
     }
 }

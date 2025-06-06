@@ -75,7 +75,8 @@ public enum ErrorCode {
     DATA_INTEGRITY_VIOLATION(1049, "Không thể xóa hoặc cập nhật do ràng buộc dữ liệu. Vui lòng kiểm tra các bản ghi liên quan.", HttpStatus.CONFLICT),
     LESSON_NOT_ASSIGNED_TO_COURSE(1050, "Lesson is not assigned to any course.", HttpStatus.NOT_FOUND),
     LESSON_TITLE_ALREADY_EXISTS(1051, "Lesson title already exists in the course.", HttpStatus.BAD_REQUEST),
-    COURSE_REVIEW_NOT_EXISTED(1052, "Course review not existed", HttpStatus.NOT_FOUND),;
+    COURSE_REVIEW_NOT_EXISTED(1052, "Course review not existed", HttpStatus.NOT_FOUND),
+    FILE_DELETION_FAILED(1053, "File deletion failed", HttpStatus.INTERNAL_SERVER_ERROR),;
 
 
 
