@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 
@@ -158,7 +159,17 @@ public class FileStorageService {
                 .toList();
     }
 
+    // Helper method to delete only physical file without touching database records
+    // Used internally by document services to avoid circular dependencies
+    public void deletePhysicalFile(String fileName, boolean isPublic) throws IOException {
+        String baseDir = isPublic ? properties.getPublicDir() : properties.getPrivateDir();
+        Path filePath = Paths.get(baseDir).resolve(fileName).normalize();
+        Files.deleteIfExists(filePath);
+        log.info("Physical file deleted: {}", fileName);
+    }
+
     @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    @Transactional
     public void deleteFile(String fileName) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
@@ -176,11 +187,55 @@ public class FileStorageService {
         }
 
         try {
-            String baseDir = uploadedFile.isPublic() ? properties.getPublicDir() : properties.getPrivateDir();
-            Path filePath = Paths.get(baseDir).resolve(fileName).normalize();
-            Files.deleteIfExists(filePath);
+            // 1. Delete all course documents that reference this file
+            List<CourseDocument> courseDocuments = courseDocumentRepository.findByFileName(fileName);
+            if (!courseDocuments.isEmpty()) {
+                courseDocumentRepository.deleteAll(courseDocuments);
+                log.info("Deleted {} course documents referencing file: {}", courseDocuments.size(), fileName);
+            }
+
+            // 2. Delete all lesson documents that reference this file
+            List<LessonDocument> lessonDocuments = lessonDocumentRepository.findByFileName(fileName);
+            if (!lessonDocuments.isEmpty()) {
+                lessonDocumentRepository.deleteAll(lessonDocuments);
+                log.info("Deleted {} lesson documents referencing file: {}", lessonDocuments.size(), fileName);
+            }
+
+            // 3. Clear avatar URLs that reference this file
+            String[] possibleAvatarPaths = {
+                "/uploads/public/" + fileName,
+                "/uploads/private/" + fileName,
+                fileName, // Direct filename
+                "uploads/public/" + fileName, // Without leading slash
+                "uploads/private/" + fileName // Without leading slash
+            };
+            
+            for (String avatarPath : possibleAvatarPaths) {
+                List<User> usersWithAvatar = userRepository.findByAvatarUrl(avatarPath);
+                for (User userWithAvatar : usersWithAvatar) {
+                    userWithAvatar.setAvatarUrl(null);
+                    userRepository.save(userWithAvatar);
+                    log.info("Cleared avatar URL for user: {}", userWithAvatar.getUsername());
+                }
+            }
+
+            // 4. Clear course thumbnail URLs that reference this file
+            for (String thumbnailPath : possibleAvatarPaths) {
+                List<Course> coursesWithThumbnail = courseRepository.findByThumbnailUrl(thumbnailPath);
+                for (Course course : coursesWithThumbnail) {
+                    course.setThumbnailUrl(null);
+                    courseRepository.save(course);
+                    log.info("Cleared thumbnail URL for course: {}", course.getTitle());
+                }
+            }
+
+            // 5. Delete the physical file
+            deletePhysicalFile(fileName, uploadedFile.isPublic());
+
+            // 6. Delete the UploadedFile record
             uploadedFileRepository.delete(uploadedFile);
-            log.info("File deleted successfully: {}", fileName);
+            
+            log.info("File deleted successfully with all references cleaned up: {}", fileName);
         } catch (IOException e) {
             log.error("Could not delete file: {}", fileName, e);
             throw new AppException(ErrorCode.FILE_DELETION_FAILED);

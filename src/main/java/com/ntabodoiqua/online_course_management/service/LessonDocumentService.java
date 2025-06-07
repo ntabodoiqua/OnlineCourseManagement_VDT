@@ -147,9 +147,9 @@ public class LessonDocumentService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
         
-        // Delete physical file
+        // Delete physical file only (not the UploadedFile record to avoid circular dependency)
         try {
-            fileStorageService.deleteFile(document.getFileName());
+            fileStorageService.deletePhysicalFile(document.getFileName(), false);
         } catch (Exception e) {
             log.warn("Failed to delete physical file: {}", document.getFileName());
         }
