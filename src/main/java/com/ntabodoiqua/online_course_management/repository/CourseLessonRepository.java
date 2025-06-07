@@ -17,6 +17,7 @@ public interface CourseLessonRepository extends JpaRepository<CourseLesson, Stri
     boolean existsByLessonId(String lessonId);
     Optional<CourseLesson> findByLesson_Id(String lessonId);
     List<CourseLesson> findByLesson(Lesson lesson);
+    long countByLesson(Lesson lesson);
     @Transactional
     void deleteByCourseId(String courseId);
     boolean existsByPrerequisiteId(String prerequisiteId);

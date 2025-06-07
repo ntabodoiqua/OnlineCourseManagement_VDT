@@ -13,6 +13,10 @@ public interface LessonMapper {
     @Mapping(source = "createdBy", target = "createdBy")
     LessonResponse toLessonResponse(Lesson lesson);
 
+    @Mapping(source = "lesson.createdBy", target = "createdBy")
+    @Mapping(source = "courseCount", target = "courseCount")
+    LessonResponse toLessonResponseWithCourseCount(Lesson lesson, Integer courseCount);
+
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateLessonFromRequest(LessonRequest request, @MappingTarget Lesson lesson);
 }

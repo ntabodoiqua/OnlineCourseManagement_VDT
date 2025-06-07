@@ -51,7 +51,10 @@ public class LessonService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         lesson.setCreatedBy(user);
         lesson = lessonRepository.save(lesson);
-        return lessonMapper.toLessonResponse(lesson);
+        
+        // Tính courseCount cho response
+        Integer courseCount = (int) courseLessonRepository.countByLesson(lesson);
+        return lessonMapper.toLessonResponseWithCourseCount(lesson, courseCount);
     }
 
     // Logic kiểm tra quyền truy cập
@@ -75,7 +78,10 @@ public class LessonService {
         lessonMapper.updateLessonFromRequest(request, lesson);
         lesson.setUpdatedAt(LocalDateTime.now());
         lesson = lessonRepository.save(lesson);
-        return lessonMapper.toLessonResponse(lesson);
+        
+        // Tính courseCount cho response
+        Integer courseCount = (int) courseLessonRepository.countByLesson(lesson);
+        return lessonMapper.toLessonResponseWithCourseCount(lesson, courseCount);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
@@ -93,12 +99,15 @@ public class LessonService {
     // Định nghĩa Lesson Response tùy quyền
     public LessonResponse mapLessonToResponse(Lesson lesson, boolean full) {
         if (full) {
-            return lessonMapper.toLessonResponse(lesson);
+            // Tính courseCount cho response đầy đủ
+            Integer courseCount = (int) courseLessonRepository.countByLesson(lesson);
+            return lessonMapper.toLessonResponseWithCourseCount(lesson, courseCount);
         } else {
             // chỉ trả về id, title, các trường khác null
             return LessonResponse.builder()
                     .id(lesson.getId())
                     .title(lesson.getTitle())
+                    .courseCount(0) // Không show courseCount cho limited access
                     .build();
         }
     }
@@ -117,9 +126,12 @@ public class LessonService {
 
         Page<Lesson> lessons = lessonRepository.findAll(LessonSpecification.withFilter(filter), pageable);
 
-        // Admin/instructor: luôn trả về full
+        // Admin/instructor: luôn trả về full với courseCount
         if (isAdmin || isInstructor) {
-            return lessons.map(lessonMapper::toLessonResponse);
+            return lessons.map(lesson -> {
+                Integer courseCount = (int) courseLessonRepository.countByLesson(lesson);
+                return lessonMapper.toLessonResponseWithCourseCount(lesson, courseCount);
+            });
         }
 
         // Student: kiểm tra từng bài học
@@ -151,8 +163,9 @@ public class LessonService {
         boolean isInstructor = roles.contains("ROLE_INSTRUCTOR");
 
         if (isAdmin || isInstructor) {
-            // Toàn quyền truy cập nội dung
-            return lessonMapper.toLessonResponse(lesson);
+            // Toàn quyền truy cập nội dung với courseCount
+            Integer courseCount = (int) courseLessonRepository.countByLesson(lesson);
+            return lessonMapper.toLessonResponseWithCourseCount(lesson, courseCount);
         }
 
         // Nếu là student: kiểm tra đã đăng ký khóa học có lesson này chưa
@@ -165,13 +178,15 @@ public class LessonService {
                 .anyMatch(cl -> cl.getLesson().getId().equals(lessonId));
 
         if (hasAccess) {
-            return lessonMapper.toLessonResponse(lesson);
+            Integer courseCount = (int) courseLessonRepository.countByLesson(lesson);
+            return lessonMapper.toLessonResponseWithCourseCount(lesson, courseCount);
         }
 
         // Nếu không có quyền, chỉ trả về title/id
         return LessonResponse.builder()
                 .id(lesson.getId())
                 .title(lesson.getTitle())
+                .courseCount(0) // Không show courseCount cho limited access
                 .build();
     }
 }

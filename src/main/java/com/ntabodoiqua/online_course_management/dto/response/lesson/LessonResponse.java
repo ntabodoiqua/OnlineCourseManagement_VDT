@@ -21,4 +21,6 @@ public class LessonResponse {
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
     UserResponse createdBy;
+    Integer courseCount;
+
 }
