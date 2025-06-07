@@ -16,11 +16,8 @@ public class LessonResponse {
     String id;
     String title;
     String content;
-    String videoUrl;
-    String attachmentUrl;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
     UserResponse createdBy;
     Integer courseCount;
-
 }

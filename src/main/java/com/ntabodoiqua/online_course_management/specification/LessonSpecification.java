@@ -34,20 +34,6 @@ public class LessonSpecification {
             if (filter.getUpdatedTo() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("updatedAt"), filter.getUpdatedTo()));
             }
-            if (filter.getHasVideo() != null) {
-                if (filter.getHasVideo()) {
-                    predicates.add(cb.isNotNull(root.get("videoUrl")));
-                } else {
-                    predicates.add(cb.isNull(root.get("videoUrl")));
-                }
-            }
-            if (filter.getHasAttachment() != null) {
-                if (filter.getHasAttachment()) {
-                    predicates.add(cb.isNotNull(root.get("attachmentUrl")));
-                } else {
-                    predicates.add(cb.isNull(root.get("attachmentUrl")));
-                }
-            }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };

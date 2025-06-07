@@ -13,8 +13,6 @@ import java.time.LocalDate;
 public class LessonUpdateRequest {
     String title;
     String content;
-    String videoUrl;
-    String attachmentUrl;
     Integer orderIndex;
     LocalDate startDate;
     LocalDate endDate;

@@ -11,6 +11,4 @@ import lombok.experimental.FieldDefaults;
 public class LessonRequest {
     String title;
     String content;
-    String videoUrl;
-    String attachmentUrl;
 }

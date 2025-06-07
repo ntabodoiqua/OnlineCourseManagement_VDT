@@ -25,7 +25,4 @@ public class LessonFilterRequest {
     LocalDateTime updatedFrom;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     LocalDateTime updatedTo;
-
-    Boolean hasVideo;      // true = chỉ lấy có video, false = chỉ lấy không có video, null = tất cả
-    Boolean hasAttachment; // tương tự
 }

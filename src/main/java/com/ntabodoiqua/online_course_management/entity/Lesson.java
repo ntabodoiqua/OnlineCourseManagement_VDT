@@ -25,9 +25,6 @@ public class Lesson {
     @Lob
     String content;
 
-    String videoUrl;
-    String attachmentUrl;
-
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 
