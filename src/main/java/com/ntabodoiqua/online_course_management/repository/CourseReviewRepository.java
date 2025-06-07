@@ -5,6 +5,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -22,4 +24,8 @@ public interface CourseReviewRepository extends JpaRepository<CourseReview, Stri
     void deleteByCourseId(String courseId);
 
     Page<CourseReview> findByCourseIdAndIsApprovedFalse(String courseId, Pageable pageable);
+
+    // Methods for instructor statistics
+    @Query("SELECT cr FROM CourseReview cr WHERE cr.course.instructor.id = :instructorId ORDER BY cr.reviewDate DESC")
+    Page<CourseReview> findByInstructorIdOrderByReviewDateDesc(@Param("instructorId") String instructorId, Pageable pageable);
 }

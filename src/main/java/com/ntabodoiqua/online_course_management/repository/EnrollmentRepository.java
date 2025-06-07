@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,4 +26,14 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String> 
 
     @Query("SELECT e.course.id, COUNT(e.course.id) as enrollmentCount FROM Enrollment e GROUP BY e.course.id ORDER BY enrollmentCount DESC")
     Page<Object[]> findPopularCourseIds(Pageable pageable);
+
+    // Methods for instructor statistics
+    @Query("SELECT COUNT(DISTINCT e.student.id) FROM Enrollment e WHERE e.course.instructor.id = :instructorId AND e.approvalStatus = 'APPROVED'")
+    long countDistinctStudentsByInstructorId(@Param("instructorId") String instructorId);
+
+    @Query("SELECT e FROM Enrollment e WHERE e.course.instructor.id = :instructorId ORDER BY e.enrollmentDate DESC")
+    Page<Enrollment> findByInstructorIdOrderByEnrollmentDateDesc(@Param("instructorId") String instructorId, Pageable pageable);
+
+    @Query("SELECT e.course.id, COUNT(e.course.id) as enrollmentCount FROM Enrollment e WHERE e.course.instructor.id = :instructorId GROUP BY e.course.id ORDER BY enrollmentCount DESC")
+    Page<Object[]> findPopularCourseIdsByInstructorId(@Param("instructorId") String instructorId, Pageable pageable);
 }

@@ -5,6 +5,8 @@ import com.ntabodoiqua.online_course_management.entity.CourseLesson;
 import com.ntabodoiqua.online_course_management.entity.Lesson;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,4 +25,8 @@ public interface CourseLessonRepository extends JpaRepository<CourseLesson, Stri
     boolean existsByPrerequisiteId(String prerequisiteId);
     List<CourseLesson> findByCourseAndOrderIndexGreaterThanOrderByOrderIndexAsc(Course course, int orderIndex);
     long countByCourse(Course course);
+
+    // Methods for instructor statistics
+    @Query("SELECT COUNT(cl) FROM CourseLesson cl WHERE cl.course.instructor.id = :instructorId")
+    long countByInstructorId(@Param("instructorId") String instructorId);
 }
