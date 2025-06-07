@@ -36,4 +36,35 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String> 
 
     @Query("SELECT e.course.id, COUNT(e.course.id) as enrollmentCount FROM Enrollment e WHERE e.course.instructor.id = :instructorId GROUP BY e.course.id ORDER BY enrollmentCount DESC")
     Page<Object[]> findPopularCourseIdsByInstructorId(@Param("instructorId") String instructorId, Pageable pageable);
+
+    // Advanced statistics methods
+    @Query("SELECT COUNT(e) FROM Enrollment e WHERE e.course.instructor.id = :instructorId")
+    long countTotalEnrollmentsByInstructorId(@Param("instructorId") String instructorId);
+
+    @Query("SELECT COUNT(e) FROM Enrollment e WHERE e.course.instructor.id = :instructorId AND e.isCompleted = true")
+    long countCompletedEnrollmentsByInstructorId(@Param("instructorId") String instructorId);
+
+    @Query("SELECT COUNT(e) FROM Enrollment e WHERE e.course.instructor.id = :instructorId AND e.approvalStatus = com.ntabodoiqua.online_course_management.enums.EnrollmentStatus.APPROVED")
+    long countApprovedEnrollmentsByInstructorId(@Param("instructorId") String instructorId);
+
+    @Query("SELECT COUNT(e) FROM Enrollment e WHERE e.course.instructor.id = :instructorId AND e.approvalStatus = com.ntabodoiqua.online_course_management.enums.EnrollmentStatus.APPROVED AND e.isCompleted = false")
+    long countActiveStudentsByInstructorId(@Param("instructorId") String instructorId);
+
+    // Monthly enrollment trends (last 6 months)
+    @Query(value = "SELECT DATE_FORMAT(e.enrollment_date, '%Y-%m') as month, COUNT(*) as enrollments " +
+                   "FROM enrollment e " +
+                   "JOIN course c ON e.course_id = c.id " +
+                   "WHERE c.instructor_id = :instructorId " +
+                   "AND e.enrollment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) " +
+                   "GROUP BY DATE_FORMAT(e.enrollment_date, '%Y-%m') " +
+                   "ORDER BY month DESC", nativeQuery = true)
+    List<Object[]> findMonthlyEnrollmentTrendsByInstructorId(@Param("instructorId") String instructorId);
+
+    // Category distribution for instructor's courses
+    @Query("SELECT c.category.name, COUNT(DISTINCT c) " +
+           "FROM Course c " +
+           "WHERE c.instructor.id = :instructorId " +
+           "GROUP BY c.category.name " +
+           "ORDER BY COUNT(DISTINCT c) DESC")
+    List<Object[]> findCategoryDistributionByInstructorId(@Param("instructorId") String instructorId);
 }

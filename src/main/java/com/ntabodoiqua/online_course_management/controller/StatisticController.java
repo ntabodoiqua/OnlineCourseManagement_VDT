@@ -6,11 +6,15 @@ import com.ntabodoiqua.online_course_management.dto.statistic.OverallStatsRespon
 import com.ntabodoiqua.online_course_management.service.InstructorStatisticService;
 import com.ntabodoiqua.online_course_management.service.StatisticService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/statistics") // Base path for statistic-related endpoints
@@ -51,6 +55,28 @@ public class StatisticController {
         InstructorStatsResponse stats = instructorStatisticService.getInstructorStatistics();
         ApiResponse<InstructorStatsResponse> response = ApiResponse.<InstructorStatsResponse>builder()
                 .message("Successfully retrieved instructor statistics.")
+                .result(stats)
+                .build();
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Endpoint to retrieve instructor statistics filtered by date range.
+     * This provides the same statistics as the main endpoint but filtered by the specified date range.
+     * Access is restricted to users with 'INSTRUCTOR' role.
+     * @param startDate The start date for filtering (optional)
+     * @param endDate The end date for filtering (optional)
+     * @return ResponseEntity containing ApiResponse with InstructorStatsResponse DTO.
+     */
+    @GetMapping("/instructor/filtered")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<ApiResponse<InstructorStatsResponse>> getInstructorStatisticsFiltered(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        
+        InstructorStatsResponse stats = instructorStatisticService.getInstructorStatisticsFiltered(startDate, endDate);
+        ApiResponse<InstructorStatsResponse> response = ApiResponse.<InstructorStatsResponse>builder()
+                .message("Successfully retrieved filtered instructor statistics.")
                 .result(stats)
                 .build();
         return ResponseEntity.ok(response);

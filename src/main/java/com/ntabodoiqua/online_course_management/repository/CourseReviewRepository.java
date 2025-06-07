@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface CourseReviewRepository extends JpaRepository<CourseReview, String>, JpaSpecificationExecutor<CourseReview> {
 
@@ -28,4 +30,19 @@ public interface CourseReviewRepository extends JpaRepository<CourseReview, Stri
     // Methods for instructor statistics
     @Query("SELECT cr FROM CourseReview cr WHERE cr.course.instructor.id = :instructorId ORDER BY cr.reviewDate DESC")
     Page<CourseReview> findByInstructorIdOrderByReviewDateDesc(@Param("instructorId") String instructorId, Pageable pageable);
+
+    // Advanced rating statistics
+    @Query("SELECT AVG(cr.rating) FROM CourseReview cr WHERE cr.course.instructor.id = :instructorId AND cr.isApproved = true")
+    Double findAverageRatingByInstructorId(@Param("instructorId") String instructorId);
+
+    // Monthly rating trends (last 6 months)
+    @Query(value = "SELECT DATE_FORMAT(cr.review_date, '%Y-%m') as month, AVG(cr.rating) as avgRating " +
+                   "FROM course_review cr " +
+                   "JOIN course c ON cr.course_id = c.id " +
+                   "WHERE c.instructor_id = :instructorId " +
+                   "AND cr.is_approved = true " +
+                   "AND cr.review_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) " +
+                   "GROUP BY DATE_FORMAT(cr.review_date, '%Y-%m') " +
+                   "ORDER BY month DESC", nativeQuery = true)
+    List<Object[]> findMonthlyRatingTrendsByInstructorId(@Param("instructorId") String instructorId);
 }
