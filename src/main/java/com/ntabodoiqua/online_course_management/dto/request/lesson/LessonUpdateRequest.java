@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LessonUpdateRequest {
     String title;
+    String description;
     String content;
     Integer orderIndex;
     LocalDate startDate;

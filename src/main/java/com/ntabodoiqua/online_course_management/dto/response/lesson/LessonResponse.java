@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class LessonResponse {
     String id;
     String title;
+    String description;
     String content;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;

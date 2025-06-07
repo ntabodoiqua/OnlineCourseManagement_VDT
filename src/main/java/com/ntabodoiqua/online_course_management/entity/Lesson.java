@@ -21,6 +21,8 @@ public class Lesson {
     String id;
 
     String title;
+    
+    String description;
 
     @Lob
     String content;
