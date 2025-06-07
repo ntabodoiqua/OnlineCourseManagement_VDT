@@ -1,6 +1,7 @@
 package com.ntabodoiqua.online_course_management.controller;
 
 import com.ntabodoiqua.online_course_management.dto.request.ApiResponse;
+import com.ntabodoiqua.online_course_management.dto.response.document.FileUsageResponse;
 import com.ntabodoiqua.online_course_management.entity.UploadedFile;
 import com.ntabodoiqua.online_course_management.entity.User;
 import com.ntabodoiqua.online_course_management.exception.AppException;
@@ -115,6 +116,16 @@ public class FileController {
         return ApiResponse.<Page<UploadedFile>>builder()
                 .message("Files fetched successfully")
                 .result(files)
+                .build();
+    }
+
+    @GetMapping("/check-usage/{fileName}")
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public ApiResponse<FileUsageResponse> checkFileUsage(@PathVariable String fileName) {
+        FileUsageResponse usage = fileStorageService.checkFileUsage(fileName);
+        return ApiResponse.<FileUsageResponse>builder()
+                .message("File usage checked successfully")
+                .result(usage)
                 .build();
     }
 }

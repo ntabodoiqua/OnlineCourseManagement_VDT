@@ -14,4 +14,7 @@ public interface CourseDocumentRepository extends JpaRepository<CourseDocument, 
     List<CourseDocument> findByCourseId(String courseId);
     Optional<CourseDocument> findByIdAndCourseId(String id, String courseId);
     void deleteByCourseId(String courseId);
+    
+    // New method to find documents by fileName
+    List<CourseDocument> findByFileName(String fileName);
 } 

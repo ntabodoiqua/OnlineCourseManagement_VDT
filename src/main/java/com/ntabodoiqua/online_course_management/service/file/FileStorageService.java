@@ -2,11 +2,18 @@ package com.ntabodoiqua.online_course_management.service.file;
 
 import com.ntabodoiqua.online_course_management.entity.UploadedFile;
 import com.ntabodoiqua.online_course_management.entity.User;
+import com.ntabodoiqua.online_course_management.entity.Course;
+import com.ntabodoiqua.online_course_management.entity.CourseDocument;
+import com.ntabodoiqua.online_course_management.entity.LessonDocument;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.repository.UploadedFileRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.repository.CourseDocumentRepository;
+import com.ntabodoiqua.online_course_management.repository.LessonDocumentRepository;
+import com.ntabodoiqua.online_course_management.repository.CourseRepository;
 import com.ntabodoiqua.online_course_management.specification.UploadedFileSpecification;
+import com.ntabodoiqua.online_course_management.dto.response.document.FileUsageResponse;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -29,6 +36,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +46,9 @@ import java.util.stream.Collectors;
 public class FileStorageService {
     UserRepository userRepository;
     UploadedFileRepository uploadedFileRepository;
+    CourseDocumentRepository courseDocumentRepository;
+    LessonDocumentRepository lessonDocumentRepository;
+    CourseRepository courseRepository;
     FileStorageProperties properties;
 
     public String storeFile(MultipartFile file, boolean isPublic) {
@@ -90,7 +101,14 @@ public class FileStorageService {
         UploadedFile uploadedFile = uploadedFileRepository.findByFileName(fileName)
                 .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
 
-        if (!uploadedFile.getUploadedBy().getUsername().equals(currentUsername)) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        
+        // Allow admin to make any file public, others can only modify their own files
+        boolean isAdmin = currentUser.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+        
+        if (!isAdmin && !uploadedFile.getUploadedBy().getUsername().equals(currentUsername)) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -108,7 +126,14 @@ public class FileStorageService {
         UploadedFile uploadedFile = uploadedFileRepository.findByFileName(fileName)
                 .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
 
-        if (!uploadedFile.getUploadedBy().getUsername().equals(currentUsername)) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        
+        // Allow admin to make any file private, others can only modify their own files
+        boolean isAdmin = currentUser.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+        
+        if (!isAdmin && !uploadedFile.getUploadedBy().getUsername().equals(currentUsername)) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -142,7 +167,11 @@ public class FileStorageService {
         UploadedFile uploadedFile = uploadedFileRepository.findByFileName(fileName)
                 .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
 
-        if (!uploadedFile.getUploadedBy().equals(user)) {
+        // Allow admin to delete any file, others can only delete their own files
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+        
+        if (!isAdmin && !uploadedFile.getUploadedBy().equals(user)) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -164,9 +193,118 @@ public class FileStorageService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        return uploadedFileRepository.findAll(
-                UploadedFileSpecification.withFilter(user, contentType, fileName),
-                pageable
-        );
+        // Check if user is admin
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+
+        if (isAdmin) {
+            // Admin can see all files
+            return uploadedFileRepository.findAll(
+                    UploadedFileSpecification.withFilterForAdmin(contentType, fileName),
+                    pageable
+            );
+        } else {
+            // Regular users can only see their own files
+            return uploadedFileRepository.findAll(
+                    UploadedFileSpecification.withFilter(user, contentType, fileName),
+                    pageable
+            );
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public FileUsageResponse checkFileUsage(String fileName) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        UploadedFile uploadedFile = uploadedFileRepository.findByFileName(fileName)
+                .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
+
+        // Allow admin to check any file usage, others can only check their own files
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+        
+        if (!isAdmin && !uploadedFile.getUploadedBy().equals(user)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        List<FileUsageResponse.FileUsageDetail> usageDetails = new ArrayList<>();
+
+        // Check course documents
+        List<CourseDocument> courseDocuments = courseDocumentRepository.findByFileName(fileName);
+        for (CourseDocument doc : courseDocuments) {
+            usageDetails.add(FileUsageResponse.FileUsageDetail.builder()
+                    .type("course")
+                    .id(doc.getCourse().getId())
+                    .title(doc.getCourse().getTitle())
+                    .description("Tài liệu: " + doc.getTitle())
+                    .build());
+        }
+
+        // Check lesson documents
+        List<LessonDocument> lessonDocuments = lessonDocumentRepository.findByFileName(fileName);
+        for (LessonDocument doc : lessonDocuments) {
+            usageDetails.add(FileUsageResponse.FileUsageDetail.builder()
+                    .type("lesson")
+                    .id(doc.getLesson().getId())
+                    .title(doc.getLesson().getTitle())
+                    .description("Tài liệu: " + doc.getTitle())
+                    .build());
+        }
+
+        // Check user avatars - check multiple possible path formats
+        String[] possibleAvatarPaths = {
+            "/uploads/public/" + fileName,
+            "/uploads/private/" + fileName,
+            fileName, // Direct filename
+            "uploads/public/" + fileName, // Without leading slash
+            "uploads/private/" + fileName // Without leading slash
+        };
+        
+        for (String avatarPath : possibleAvatarPaths) {
+            List<User> usersWithAvatar = userRepository.findByAvatarUrl(avatarPath);
+            for (User userWithAvatar : usersWithAvatar) {
+                // Avoid duplicate entries
+                boolean alreadyAdded = usageDetails.stream()
+                    .anyMatch(detail -> "user_avatar".equals(detail.getType()) && 
+                             userWithAvatar.getId().equals(detail.getId()));
+                
+                if (!alreadyAdded) {
+                    usageDetails.add(FileUsageResponse.FileUsageDetail.builder()
+                            .type("user_avatar")
+                            .id(userWithAvatar.getId())
+                            .title(userWithAvatar.getUsername())
+                            .description("Avatar của người dùng: " + userWithAvatar.getFirstName() + " " + userWithAvatar.getLastName())
+                            .build());
+                }
+            }
+        }
+
+        // Check course thumbnails - check multiple possible path formats
+        for (String thumbnailPath : possibleAvatarPaths) {
+            List<Course> coursesWithThumbnail = courseRepository.findByThumbnailUrl(thumbnailPath);
+            for (Course course : coursesWithThumbnail) {
+                // Avoid duplicate entries
+                boolean alreadyAdded = usageDetails.stream()
+                    .anyMatch(detail -> "course_thumbnail".equals(detail.getType()) && 
+                             course.getId().equals(detail.getId()));
+                
+                if (!alreadyAdded) {
+                    usageDetails.add(FileUsageResponse.FileUsageDetail.builder()
+                            .type("course_thumbnail")
+                            .id(course.getId())
+                            .title(course.getTitle())
+                            .description("Thumbnail của khóa học")
+                            .build());
+                }
+            }
+        }
+
+        return FileUsageResponse.builder()
+                .fileName(fileName)
+                .isUsed(!usageDetails.isEmpty())
+                .usageDetails(usageDetails)
+                .build();
     }
 }

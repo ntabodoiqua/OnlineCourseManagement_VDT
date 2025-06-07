@@ -38,4 +38,7 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     long countByRoleName(@Param("roleName") String roleName);
 
     long countByEnabled(boolean enabled);
+
+    // New method to find users by avatarUrl
+    List<User> findByAvatarUrl(String avatarUrl);
 }

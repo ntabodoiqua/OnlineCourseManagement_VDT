@@ -14,4 +14,7 @@ public interface LessonDocumentRepository extends JpaRepository<LessonDocument, 
     List<LessonDocument> findByLessonId(String lessonId);
     Optional<LessonDocument> findByIdAndLessonId(String id, String lessonId);
     void deleteByLessonId(String lessonId);
+    
+    // New method to find documents by fileName
+    List<LessonDocument> findByFileName(String fileName);
 } 
