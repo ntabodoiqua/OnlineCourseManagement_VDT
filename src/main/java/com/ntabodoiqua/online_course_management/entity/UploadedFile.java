@@ -22,6 +22,7 @@ public class UploadedFile {
     String fileName; // Tên tệp đã tải lên
     String originalFileName; // Tên tệp gốc
     String contentType; // Loại nội dung của tệp (ví dụ: image/png, application/pdf)
+    Long fileSize; // Dung lượng tệp (bytes)
     boolean isPublic; // Trạng thái công khai của tệp (có thể truy cập công khai hay không)
     LocalDateTime uploadedAt; // Ngày giờ tải lên tệp
 

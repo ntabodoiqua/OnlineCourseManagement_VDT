@@ -17,9 +17,11 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Map URL /uploads/** tới thư mục uploads/ ở ngoài root project
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:uploads/"); // Có thể dùng đường dẫn tuyệt đối nếu muốn
+        // Chỉ map URL /uploads/public/** tới thư mục uploads/public/
+        registry.addResourceHandler("/uploads/public/**")
+                .addResourceLocations("file:uploads/public/");
+        
+        // Không map /uploads/private/** để buộc phải qua controller với authentication
     }
 
     @Override
@@ -53,6 +55,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/category/get-categories",
                         "/category",
                         "/uploads/public/**",
+                        "/files/download/**",
                         "/courses/**",
                         "/lessons",
                         "/swagger-ui/**",

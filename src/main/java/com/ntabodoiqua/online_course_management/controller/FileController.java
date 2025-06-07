@@ -17,6 +17,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -46,26 +47,29 @@ public class FileController {
                 .build();
     }
 
-//    @GetMapping("/download/{fileName}")
-//    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
-//        UploadedFile file = uploadedFileRepository.findByFileName(fileName)
-//                .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
-//
-//        if (!file.isPublic()) {
-//            // kiểm tra quyền sở hữu hoặc tham gia khóa học
-//            String username = SecurityContextHolder.getContext().getAuthentication().getName();
-//            boolean hasAccess = file.getUploadedBy().getUsername().equals(username)
-//                    || userService.isEnrolled(username, file.getCourse().getId());
-//
-//            if (!hasAccess) throw new AppException(ErrorCode.ACCESS_DENIED);
-//        }
-//
-//        Resource resource = fileStorageService.loadFile(fileName, file.isPublic());
-//
-//        return ResponseEntity.ok()
-//                .contentType(MediaType.parseMediaType(file.getContentType()))
-//                .body(resource);
-//    }
+    @GetMapping("/download/{fileName}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
+        UploadedFile file = uploadedFileRepository.findByFileName(fileName)
+                .orElseThrow(() -> new AppException(ErrorCode.FILE_NOT_FOUND));
+
+        if (!file.isPublic()) {
+            // kiểm tra quyền sở hữu hoặc tham gia khóa học
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            boolean hasAccess = file.getUploadedBy().getUsername().equals(username);
+            // Nếu file có liên kết với khóa học, kiểm tra enrollment
+            if (file.getCourse() != null) {
+                hasAccess = hasAccess || userService.isEnrolled(username, file.getCourse().getId());
+            }
+
+            if (!hasAccess) throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Resource resource = fileStorageService.loadFile(fileName, file.isPublic());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.getContentType()))
+                .body(resource);
+    }
 
     // Controller chuyển file từ private sang public
     @PutMapping("/make-public/{fileName}")

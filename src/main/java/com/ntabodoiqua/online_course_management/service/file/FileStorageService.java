@@ -56,6 +56,7 @@ public class FileStorageService {
                     .fileName(fileName)
                     .originalFileName(file.getOriginalFilename())
                     .contentType(file.getContentType())
+                    .fileSize(file.getSize())
                     .isPublic(isPublic)
                     .uploadedAt(LocalDateTime.now())
                     .uploadedBy(userRepository.findByUsername(

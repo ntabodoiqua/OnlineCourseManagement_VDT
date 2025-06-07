@@ -86,9 +86,6 @@ public class CourseService {
             thumbnailUrl = DefaultUrl.COURSE_THUMBNAIL.getURL();
         }
 
-        // Lưu thumbnail vào hệ thống file
-        assert thumbnail != null;
-        String fileName = fileStorageService.storeFile(thumbnail, true);
         Course course = courseMapper.toCourse(request);
         course.setInstructor(instructor);
         course.setCategory(category);
@@ -97,7 +94,7 @@ public class CourseService {
         LocalDateTime now = LocalDateTime.now();
         course.setActive(now.isAfter(request.getStartDate().atStartOfDay())
                 && now.isBefore(request.getEndDate().atTime(23, 59, 59)));
-        course.setThumbnailUrl("/uploads/public/" + fileName);
+        course.setThumbnailUrl(thumbnailUrl);
         course.setCreatedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
         course.setRequiresApproval(request.isRequiresApproval());

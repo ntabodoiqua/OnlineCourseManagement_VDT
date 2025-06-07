@@ -13,6 +13,7 @@ import com.ntabodoiqua.online_course_management.mapper.UserMapper;
 import com.ntabodoiqua.online_course_management.repository.RoleRepository;
 import com.ntabodoiqua.online_course_management.repository.UploadedFileRepository;
 import com.ntabodoiqua.online_course_management.repository.UserRepository;
+import com.ntabodoiqua.online_course_management.repository.EnrollmentRepository;
 import com.ntabodoiqua.online_course_management.service.file.FileStorageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class UserService {
     UploadedFileRepository uploadedFileRepository;
     UserRepository userRepository;
     RoleRepository roleRepository;
+    EnrollmentRepository enrollmentRepository;
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     FileStorageService fileStorageService;
@@ -232,6 +234,14 @@ public class UserService {
         userRepository.save(user);
         log.info("User {} disabled their account successfully", username);
         return "Account disabled successfully";
+    }
+
+    // Service kiểm tra user có đăng ký khóa học không
+    public boolean isEnrolled(String username, String courseId) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        
+        return enrollmentRepository.existsByStudentIdAndCourseId(user.getId(), courseId);
     }
 
 }
