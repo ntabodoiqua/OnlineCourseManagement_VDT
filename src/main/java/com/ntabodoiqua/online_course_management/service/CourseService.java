@@ -8,6 +8,7 @@ import com.ntabodoiqua.online_course_management.entity.*;
 import com.ntabodoiqua.online_course_management.enums.DefaultUrl;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
+import com.ntabodoiqua.online_course_management.mapper.CategoryMapper;
 import com.ntabodoiqua.online_course_management.mapper.CourseMapper;
 import com.ntabodoiqua.online_course_management.mapper.UserMapper;
 import com.ntabodoiqua.online_course_management.repository.*;
@@ -62,6 +63,7 @@ public class CourseService {
     CourseLessonRepository courseLessonRepository;
     EnrollmentRepository enrollmentRepository;
     CourseReviewRepository courseReviewRepository;
+    CategoryMapper categoryMapper;
 
     // Forward declaration to avoid circular dependency
     @Lazy
@@ -302,13 +304,20 @@ public class CourseService {
             return courseMapper.toCourseResponse(course);
         } else {
             log.debug("Returning basic course information for course: {}", course.getId());
-            // Chỉ trả về id, title, ngày tạo, giảng viên, thumbnail, các trường khác null
+            // Trả về thông tin cơ bản mà student cần để quyết định đăng ký khóa học
             return CourseResponse.builder()
                     .id(course.getId())
                     .title(course.getTitle())
+                    .description(course.getDescription())
                     .createdAt(course.getCreatedAt())
                     .instructor(userMapper.toUserResponse(course.getInstructor()))
                     .thumbnailUrl(course.getThumbnailUrl())
+                    .category(categoryMapper.toCategoryResponse(course.getCategory()))
+                    .totalLessons(course.getTotalLessons())
+                    .isActive(course.isActive())
+                    .startDate(course.getStartDate())
+                    .endDate(course.getEndDate())
+                    .requiresApproval(course.isRequiresApproval())
                     .build();
         }
     }
