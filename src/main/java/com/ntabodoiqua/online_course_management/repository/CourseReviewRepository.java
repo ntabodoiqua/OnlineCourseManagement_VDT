@@ -52,4 +52,8 @@ public interface CourseReviewRepository extends JpaRepository<CourseReview, Stri
 
     @Query("SELECT COUNT(cr) FROM CourseReview cr WHERE cr.course.id = :courseId AND cr.isApproved = true")
     Long countApprovedReviewsByCourseId(@Param("courseId") String courseId);
+    
+    // Count approved reviews by instructor
+    @Query("SELECT COUNT(cr) FROM CourseReview cr WHERE cr.course.instructor.id = :instructorId AND cr.isApproved = true")
+    Integer countApprovedReviewsByInstructorId(@Param("instructorId") String instructorId);
 }
