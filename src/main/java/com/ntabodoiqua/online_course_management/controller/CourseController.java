@@ -135,5 +135,26 @@ public class CourseController {
                 .build();
     }
 
-    
+    // API đồng bộ totalLessons cho tất cả khóa học (Admin only)
+    @PostMapping("/admin/sync-all-total-lessons")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<String> syncAllCoursesTotalLessons() {
+        courseService.syncAllCoursesTotalLessons();
+        return ApiResponse.<String>builder()
+                .message("Successfully synced totalLessons for all courses")
+                .result("Sync completed")
+                .build();
+    }
+
+    // API đồng bộ totalLessons cho một khóa học cụ thể
+    @PostMapping("/{courseId}/sync-total-lessons")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ApiResponse<String> syncCourseTotalLessons(@PathVariable String courseId) {
+        courseService.syncCourseTotalLessons(courseId);
+        return ApiResponse.<String>builder()
+                .message("Successfully synced totalLessons for course")
+                .result("Sync completed for course: " + courseId)
+                .build();
+    }
+
 }

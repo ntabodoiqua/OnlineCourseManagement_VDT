@@ -27,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +73,25 @@ public class CourseLessonService {
         }
     }
 
+    /**
+     * Đồng bộ hóa và cập nhật chính xác totalLessons cho course
+     * Sử dụng transaction để đảm bảo consistency
+     */
+    @Transactional
+    private void syncCourseTotalLessons(Course course) {
+        // Đếm số lượng bài học thực tế từ database
+        long actualLessonCount = courseLessonRepository.countByCourse(course);
+        
+        // Cập nhật nếu khác biệt
+        if (course.getTotalLessons() != (int) actualLessonCount) {
+            log.info("Syncing totalLessons for course {}: {} -> {}", 
+                course.getId(), course.getTotalLessons(), actualLessonCount);
+            course.setTotalLessons((int) actualLessonCount);
+            courseRepository.save(course);
+        }
+    }
+
+    @Transactional
     public CourseLessonResponse addLessonToCourse(String courseId, CourseLessonRequest request) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
@@ -114,9 +134,8 @@ public class CourseLessonService {
 
         courseLesson = courseLessonRepository.save(courseLesson);
 
-        // Cập nhật tổng số bài học
-        course.setTotalLessons(course.getTotalLessons() + 1);
-        courseRepository.save(course);
+        // Đồng bộ hóa totalLessons với database thực tế
+        syncCourseTotalLessons(course);
 
         // Cập nhật progress cho tất cả enrollment của course
         updateProgressForAllEnrollmentsInCourse(course);
@@ -124,6 +143,7 @@ public class CourseLessonService {
         return courseLessonMapper.toCourseLessonResponse(courseLesson);
     }
 
+    @Transactional
     public CourseLessonResponse updateCourseLesson(String courseId, String courseLessonId, CourseLessonUpdateRequest request) {
         CourseLesson courseLesson = courseLessonRepository.findById(courseLessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_LESSON_NOT_FOUND));
@@ -163,6 +183,7 @@ public class CourseLessonService {
         return courseLessonMapper.toCourseLessonResponse(courseLesson);
     }
 
+    @Transactional
     public void removeLessonFromCourse(String courseId, String courseLessonId) {
         CourseLesson courseLessonToRemove = courseLessonRepository.findById(courseLessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_LESSON_NOT_FOUND));
@@ -190,15 +211,8 @@ public class CourseLessonService {
             courseLessonRepository.save(lesson);
         }
 
-        // Cập nhật tổng số bài học
-        Integer currentTotalLessons = course.getTotalLessons();
-        if (currentTotalLessons == null || currentTotalLessons <= 0) {
-            long actualLessonCount = courseLessonRepository.countByCourse(course);
-            course.setTotalLessons((int) actualLessonCount);
-        } else {
-            course.setTotalLessons(currentTotalLessons - 1);
-        }
-        courseRepository.save(course);
+        // Đồng bộ hóa totalLessons với database thực tế
+        syncCourseTotalLessons(course);
 
         // Cập nhật progress cho tất cả enrollment của course
         updateProgressForAllEnrollmentsInCourse(course);
@@ -292,5 +306,43 @@ public class CourseLessonService {
                 .isVisible(courseLesson.getIsVisible())
                 // Không hiển thị prerequisite để tránh lộ cấu trúc khóa học
                 .build();
+    }
+
+    /**
+     * Batch sync totalLessons cho tất cả courses
+     * Admin utility method để fix inconsistency
+     */
+    @Transactional
+    public void batchSyncAllCoursesTotalLessons() {
+        log.info("Starting batch sync for all courses totalLessons");
+        List<Course> allCourses = courseRepository.findAll();
+        
+        int updatedCount = 0;
+        for (Course course : allCourses) {
+            long actualLessonCount = courseLessonRepository.countByCourse(course);
+            if (course.getTotalLessons() != (int) actualLessonCount) {
+                log.info("Syncing course {}: {} -> {}", 
+                    course.getId(), course.getTotalLessons(), actualLessonCount);
+                course.setTotalLessons((int) actualLessonCount);
+                courseRepository.save(course);
+                updatedCount++;
+            }
+        }
+        
+        log.info("Batch sync completed. Updated {} out of {} courses", updatedCount, allCourses.size());
+    }
+
+    /**
+     * Sync totalLessons cho một course cụ thể - public method
+     */
+    @Transactional
+    public void syncSpecificCourseTotalLessons(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        
+        checkCoursePermission(course);
+        syncCourseTotalLessons(course);
+        
+        log.info("Synced totalLessons for course: {}", courseId);
     }
 }

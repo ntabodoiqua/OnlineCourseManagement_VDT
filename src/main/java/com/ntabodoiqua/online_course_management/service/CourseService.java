@@ -28,6 +28,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,6 +62,10 @@ public class CourseService {
     CourseLessonRepository courseLessonRepository;
     EnrollmentRepository enrollmentRepository;
     CourseReviewRepository courseReviewRepository;
+
+    // Forward declaration to avoid circular dependency
+    @Lazy
+    CourseLessonService courseLessonService;
 
     // Service tạo khóa học mới
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
@@ -522,17 +527,8 @@ public class CourseService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void syncAllCoursesTotalLessons() {
-        List<Course> allCourses = courseRepository.findAll();
-        for (Course course : allCourses) {
-            long actualLessonCount = courseLessonRepository.countByCourse(course);
-            if (course.getTotalLessons() != (int) actualLessonCount) {
-                log.info("Syncing totalLessons for course {}: {} -> {}", 
-                    course.getId(), course.getTotalLessons(), actualLessonCount);
-                course.setTotalLessons((int) actualLessonCount);
-                courseRepository.save(course);
-            }
-        }
-        log.info("Completed syncing totalLessons for all courses");
+        log.info("Admin triggered sync all courses totalLessons");
+        courseLessonService.batchSyncAllCoursesTotalLessons();
     }
 
     /**
@@ -541,17 +537,7 @@ public class CourseService {
     @Transactional
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
     public void syncCourseTotalLessons(String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
-        
-        checkCoursePermission(course);
-        
-        long actualLessonCount = courseLessonRepository.countByCourse(course);
-        if (course.getTotalLessons() != (int) actualLessonCount) {
-            log.info("Syncing totalLessons for course {}: {} -> {}", 
-                courseId, course.getTotalLessons(), actualLessonCount);
-            course.setTotalLessons((int) actualLessonCount);
-            courseRepository.save(course);
-        }
+        log.info("User triggered sync for course: {}", courseId);
+        courseLessonService.syncSpecificCourseTotalLessons(courseId);
     }
 }
