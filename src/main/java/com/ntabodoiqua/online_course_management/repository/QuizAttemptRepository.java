@@ -23,6 +23,10 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String
     List<QuizAttempt> findByQuizIdAndStudentIdOrderByAttemptNumberDesc(String quizId, String studentId);
     Page<QuizAttempt> findByQuizIdAndStudentId(String quizId, String studentId, Pageable pageable);
     
+    // Tìm attempt theo quiz, student và enrollment (NEW - context-aware)
+    List<QuizAttempt> findByQuizIdAndStudentIdAndEnrollmentIdOrderByAttemptNumberDesc(String quizId, String studentId, String enrollmentId);
+    Page<QuizAttempt> findByQuizIdAndStudentIdAndEnrollmentId(String quizId, String studentId, String enrollmentId, Pageable pageable);
+    
     // Tìm attempt theo quiz
     List<QuizAttempt> findByQuizOrderByStartedAtDesc(Quiz quiz);
     List<QuizAttempt> findByQuizIdOrderByStartedAtDesc(String quizId);
@@ -40,18 +44,25 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String
     
     // Tìm attempt latest của student cho quiz
     Optional<QuizAttempt> findFirstByQuizIdAndStudentIdOrderByAttemptNumberDesc(String quizId, String studentId);
+    Optional<QuizAttempt> findFirstByQuizIdAndStudentIdAndEnrollmentIdOrderByAttemptNumberDesc(String quizId, String studentId, String enrollmentId);
     
     // Tìm attempt có điểm cao nhất của student cho quiz
     @Query("SELECT qa FROM QuizAttempt qa WHERE qa.quiz.id = :quizId AND qa.student.id = :studentId AND qa.status = 'COMPLETED' ORDER BY qa.score DESC")
     List<QuizAttempt> findByQuizIdAndStudentIdOrderByScoreDesc(@Param("quizId") String quizId, @Param("studentId") String studentId);
     
+    @Query("SELECT qa FROM QuizAttempt qa WHERE qa.quiz.id = :quizId AND qa.student.id = :studentId AND qa.enrollment.id = :enrollmentId AND qa.status = 'COMPLETED' ORDER BY qa.score DESC")
+    List<QuizAttempt> findByQuizIdAndStudentIdAndEnrollmentIdOrderByScoreDesc(@Param("quizId") String quizId, @Param("studentId") String studentId, @Param("enrollmentId") String enrollmentId);
+    
     // Đếm số lần attempt
     long countByQuizIdAndStudentId(String quizId, String studentId);
     long countByQuizIdAndStudentIdAndStatus(String quizId, String studentId, AttemptStatus status);
+    long countByQuizIdAndStudentIdAndEnrollmentId(String quizId, String studentId, String enrollmentId);
+    long countByQuizIdAndStudentIdAndEnrollmentIdAndStatus(String quizId, String studentId, String enrollmentId, AttemptStatus status);
     
     // Tìm attempt đang in progress
     List<QuizAttempt> findByStatusAndStartedAtBefore(AttemptStatus status, LocalDateTime cutoffTime);
     Optional<QuizAttempt> findByQuizIdAndStudentIdAndStatus(String quizId, String studentId, AttemptStatus status);
+    Optional<QuizAttempt> findByQuizIdAndStudentIdAndEnrollmentIdAndStatus(String quizId, String studentId, String enrollmentId, AttemptStatus status);
     
     // Thống kê
     @Query("SELECT COUNT(qa) FROM QuizAttempt qa WHERE qa.quiz.id = :quizId")

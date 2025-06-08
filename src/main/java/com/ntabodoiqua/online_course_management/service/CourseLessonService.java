@@ -257,8 +257,9 @@ public class CourseLessonService {
     }
 
     /**
-     * Lấy danh sách bài học cho student với thông tin hạn chế
-     * Chỉ hiển thị tên bài học và mô tả cho khóa học active
+     * Lấy danh sách bài học cho student
+     * - Nếu student đã enrolled: trả về full content
+     * - Nếu chưa enrolled: chỉ trả về thông tin cơ bản
      */
     public Page<CourseLessonResponse> getPublicLessonsOfCourse(String courseId, CourseLessonFilterRequest filter, Pageable pageable) {
         Course course = courseRepository.findById(courseId)
@@ -272,20 +273,39 @@ public class CourseLessonService {
         // Lấy tất cả bài học visible của khóa học, sắp xếp theo orderIndex
         List<CourseLesson> allCourseLessons = courseLessonRepository.findByCourseAndIsVisibleTrueOrderByOrderIndexAsc(course);
 
-        // Convert sang response với thông tin hạn chế
-        List<CourseLessonResponse> publicResponses = allCourseLessons.stream()
-                .map(this::mapToPublicCourseLessonResponse)
+        // Kiểm tra enrollment của user hiện tại
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        final boolean isEnrolled;
+        
+        if (!"anonymousUser".equals(username)) {
+            User currentUser = userRepository.findByUsername(username).orElse(null);
+            if (currentUser != null) {
+                isEnrolled = enrollmentRepository.findByStudent(currentUser)
+                        .stream()
+                        .anyMatch(enrollment -> enrollment.getCourse().getId().equals(courseId));
+            } else {
+                isEnrolled = false;
+            }
+        } else {
+            isEnrolled = false;
+        }
+
+        // Convert sang response dựa vào enrollment status
+        List<CourseLessonResponse> responses = allCourseLessons.stream()
+                .map(courseLesson -> isEnrolled ? 
+                        courseLessonMapper.toCourseLessonResponse(courseLesson) : 
+                        mapToPublicCourseLessonResponse(courseLesson))
                 .collect(Collectors.toList());
 
         // Tạo Page manually để phù hợp với Pageable
         int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), publicResponses.size());
+        int end = Math.min(start + pageable.getPageSize(), responses.size());
         
-        List<CourseLessonResponse> pagedContent = start < publicResponses.size() ? 
-                publicResponses.subList(start, end) : 
+        List<CourseLessonResponse> pagedContent = start < responses.size() ? 
+                responses.subList(start, end) : 
                 new ArrayList<>();
 
-        return new PageImpl<>(pagedContent, pageable, publicResponses.size());
+        return new PageImpl<>(pagedContent, pageable, responses.size());
     }
 
     /**

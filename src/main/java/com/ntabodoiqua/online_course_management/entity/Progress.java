@@ -25,6 +25,7 @@ public class Progress {
     @ManyToOne
     Lesson lesson; // Bài học hiện tại
 
+    @Column(name = "is_completed")
     boolean isCompleted; // Đã hoàn thành bài học hay chưa
     LocalDate completionDate; // Ngày hoàn thành bài học
 

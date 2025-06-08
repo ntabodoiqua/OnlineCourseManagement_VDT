@@ -806,4 +806,66 @@ public class QuizService {
             boolean canViewInactive,
             String instructorUsername
     ) {}
+
+    /**
+     * Lấy quiz status cho student theo enrollment context
+     */
+    @PreAuthorize("hasRole('STUDENT')")
+    public QuizStudentResponse getQuizStatusForStudent(String quizId, String courseId) {
+        log.info("Getting quiz status for student - quiz: {}, course: {}", quizId, courseId);
+        
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+        
+        User student = getCurrentUser();
+        
+        // Get enrollment for this specific course
+        Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_EXISTED));
+        
+        // Validate quiz belongs to this course
+        boolean quizBelongsToCourse = enrollment.getCourse().getCourseLessons()
+                .stream()
+                .anyMatch(cl -> cl.getLesson().getId().equals(quiz.getLesson().getId()));
+        
+        if (!quizBelongsToCourse) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        
+        // Get enrollment-specific attempt statistics
+        int userAttempts = (int) quizAttemptRepository.countByQuizIdAndStudentIdAndEnrollmentId(
+                quizId, student.getId(), enrollment.getId());
+        
+        int remainingAttempts = calculateRemainingAttempts(quiz, userAttempts);
+        boolean canAttempt = canStudentAttempt(quiz, userAttempts);
+        
+        QuizStudentResponse response = quizMapper.toQuizStudentResponse(quiz);
+        response.setUserAttempts(userAttempts);
+        response.setRemainingAttempts(remainingAttempts);
+        response.setCanAttempt(canAttempt);
+        response.setHasAccess(true); // Already validated above
+        
+        return response;
+    }
+    
+    private boolean canStudentAttempt(Quiz quiz, int userAttempts) {
+        if (!Boolean.TRUE.equals(quiz.getIsActive())) {
+            return false;
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        if (quiz.getStartTime() != null && now.isBefore(quiz.getStartTime())) {
+            return false;
+        }
+        
+        if (quiz.getEndTime() != null && now.isAfter(quiz.getEndTime())) {
+            return false;
+        }
+        
+        if (quiz.getMaxAttempts() != null && quiz.getMaxAttempts() > 0) {
+            return userAttempts < quiz.getMaxAttempts();
+        }
+        
+        return true;
+    }
 } 

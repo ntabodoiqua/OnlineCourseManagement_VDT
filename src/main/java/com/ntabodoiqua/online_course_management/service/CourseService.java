@@ -574,4 +574,33 @@ public class CourseService {
         log.info("User triggered sync for course: {}", courseId);
         courseLessonService.syncSpecificCourseTotalLessons(courseId);
     }
+
+    /**
+     * Kiểm tra xem instructor hiện tại có phải là chủ sở hữu của khóa học hay không
+     * Method này được sử dụng cho @PreAuthorize annotation
+     */
+    public boolean isInstructorOfCourse(String courseId) {
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            User currentUser = userRepository.findByUsername(username)
+                    .orElse(null);
+            
+            if (currentUser == null) {
+                return false;
+            }
+
+            Course course = courseRepository.findById(courseId)
+                    .orElse(null);
+                    
+            if (course == null) {
+                return false;
+            }
+
+            return course.getInstructor() != null && 
+                   course.getInstructor().getUsername().equals(username);
+        } catch (Exception e) {
+            log.error("Error checking instructor permission for course {}: {}", courseId, e.getMessage());
+            return false;
+        }
+    }
 }

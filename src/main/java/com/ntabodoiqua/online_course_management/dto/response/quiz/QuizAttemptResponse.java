@@ -2,6 +2,7 @@ package com.ntabodoiqua.online_course_management.dto.response.quiz;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ntabodoiqua.online_course_management.dto.response.user.UserResponse;
+import com.ntabodoiqua.online_course_management.dto.response.enrollment.EnrollmentResponse;
 import com.ntabodoiqua.online_course_management.enums.AttemptStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -18,6 +19,7 @@ public class QuizAttemptResponse {
     String id;
     QuizResponse quiz;
     UserResponse student;
+    EnrollmentResponse enrollment;
     Integer attemptNumber;
     
     LocalDateTime startedAt;

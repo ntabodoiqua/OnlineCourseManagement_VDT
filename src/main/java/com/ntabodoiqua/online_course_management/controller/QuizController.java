@@ -76,6 +76,25 @@ public class QuizController {
                 .result(quiz)
                 .build();
     }
+
+    /**
+     * Lấy quiz status cho student theo enrollment context
+     * API mới với course context
+     */
+    @GetMapping("/{quizId}/student/status")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ApiResponse<QuizStudentResponse> getQuizStatusForStudent(
+            @PathVariable String quizId,
+            @RequestParam String courseId) {
+        log.info("Getting quiz status for student - quiz: {}, course: {}", quizId, courseId);
+        
+        QuizStudentResponse quiz = quizService.getQuizStatusForStudent(quizId, courseId);
+        
+        return ApiResponse.<QuizStudentResponse>builder()
+                .message("Quiz status retrieved successfully")
+                .result(quiz)
+                .build();
+    }
     
     /**
      * Cập nhật quiz

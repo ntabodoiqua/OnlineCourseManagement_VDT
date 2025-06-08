@@ -39,6 +39,7 @@ public class QuizAttemptService {
     QuizAttemptAnswerRepository quizAttemptAnswerRepository;
     UserRepository userRepository;
     EnrollmentRepository enrollmentRepository;
+    CourseRepository courseRepository;
     ProgressService progressService;
     
     QuizMapperFacade quizMapperFacade;
@@ -54,28 +55,32 @@ public class QuizAttemptService {
      */
     @PreAuthorize("hasRole('STUDENT')")
     @Transactional
-    public QuizAttemptResponse startQuizAttempt(String quizId) {
-        log.info("Starting quiz attempt for quiz: {}", quizId);
+    public QuizAttemptResponse startQuizAttempt(String quizId, String courseId) {
+        log.info("Starting quiz attempt for quiz: {} in course: {}", quizId, courseId);
         
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
         
         User student = getCurrentUser();
         
-        // Validate quiz availability
+        // Validate quiz availability and course context
         validateQuizAvailability(quiz, student);
+        validateQuizBelongsToCourse(quiz, courseId);
         
-        // Check if student has any in-progress attempt
+        // Get current enrollment for this specific course
+        Enrollment enrollment = getEnrollmentForCourse(courseId, student);
+        
+        // Check if student has any in-progress attempt for this enrollment
         Optional<QuizAttempt> inProgressAttempt = quizAttemptRepository
-                .findByQuizIdAndStudentIdAndStatus(quizId, student.getId(), AttemptStatus.IN_PROGRESS);
+                .findByQuizIdAndStudentIdAndEnrollmentIdAndStatus(quizId, student.getId(), enrollment.getId(), AttemptStatus.IN_PROGRESS);
         
         if (inProgressAttempt.isPresent()) {
             // Return existing in-progress attempt
             return quizMapperFacade.toQuizAttemptResponseWithDetails(inProgressAttempt.get());
         }
         
-        // Check attempt limits
-        int currentAttempts = (int) quizAttemptRepository.countByQuizIdAndStudentId(quizId, student.getId());
+        // Check attempt limits for this enrollment
+        int currentAttempts = (int) quizAttemptRepository.countByQuizIdAndStudentIdAndEnrollmentId(quizId, student.getId(), enrollment.getId());
         if (quiz.getMaxAttempts() != null && quiz.getMaxAttempts() > 0 && currentAttempts >= quiz.getMaxAttempts()) {
             throw new AppException(ErrorCode.QUIZ_MAX_ATTEMPTS_EXCEEDED);
         }
@@ -84,6 +89,7 @@ public class QuizAttemptService {
         QuizAttempt attempt = QuizAttempt.builder()
                 .quiz(quiz)
                 .student(student)
+                .enrollment(enrollment)
                 .attemptNumber(currentAttempts + 1)
                 .status(AttemptStatus.IN_PROGRESS)
                 .startedAt(LocalDateTime.now())
@@ -199,8 +205,8 @@ public class QuizAttemptService {
         QuizResultResponse result = quizAttemptMapper.toQuizResultResponse(attempt);
         
         // Add additional info
-        int userAttempts = (int) quizAttemptRepository.countByQuizIdAndStudentId(
-                attempt.getQuiz().getId(), attempt.getStudent().getId());
+        int userAttempts = (int) quizAttemptRepository.countByQuizIdAndStudentIdAndEnrollmentId(
+                attempt.getQuiz().getId(), attempt.getStudent().getId(), attempt.getEnrollment().getId());
         int remainingAttempts = calculateRemainingAttempts(attempt.getQuiz(), userAttempts);
         boolean canRetake = canStudentRetakeQuiz(attempt.getQuiz(), userAttempts);
         
@@ -215,13 +221,17 @@ public class QuizAttemptService {
      * Lấy attempt hiện tại của student
      */
     @PreAuthorize("hasRole('STUDENT')")
-    public QuizAttemptResponse getCurrentAttempt(String quizId) {
-        log.info("Getting current attempt for quiz: {}", quizId);
+    public QuizAttemptResponse getCurrentAttempt(String quizId, String courseId) {
+        log.info("Getting current attempt for quiz: {} in course: {}", quizId, courseId);
+        
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
         
         User student = getCurrentUser();
+        Enrollment enrollment = getEnrollmentForCourse(courseId, student);
         
         Optional<QuizAttempt> attempt = quizAttemptRepository
-                .findByQuizIdAndStudentIdAndStatus(quizId, student.getId(), AttemptStatus.IN_PROGRESS);
+                .findByQuizIdAndStudentIdAndEnrollmentIdAndStatus(quizId, student.getId(), enrollment.getId(), AttemptStatus.IN_PROGRESS);
         
         if (attempt.isEmpty()) {
             throw new AppException(ErrorCode.NO_ACTIVE_ATTEMPT_FOUND);
@@ -236,35 +246,43 @@ public class QuizAttemptService {
         return quizMapperFacade.toQuizAttemptResponseWithDetails(attempt.get());
     }
     
-    /**
+        /**
      * Lấy lịch sử attempts của student
      */
     @PreAuthorize("hasRole('STUDENT')")
-    public List<QuizResultResponse> getStudentAttemptHistory(String quizId) {
-        log.info("Getting attempt history for quiz: {}", quizId);
+    public List<QuizResultResponse> getStudentAttemptHistory(String quizId, String courseId) {
+        log.info("Getting attempt history for quiz: {} in course: {}", quizId, courseId);
+        
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
         
         User student = getCurrentUser();
+        Enrollment enrollment = getEnrollmentForCourse(courseId, student);
         
         List<QuizAttempt> attempts = quizAttemptRepository
-                .findByQuizIdAndStudentIdOrderByAttemptNumberDesc(quizId, student.getId());
+                .findByQuizIdAndStudentIdAndEnrollmentIdOrderByAttemptNumberDesc(quizId, student.getId(), enrollment.getId());
         
         return attempts.stream()
                 .filter(attempt -> attempt.getStatus() == AttemptStatus.COMPLETED)
                 .map(quizAttemptMapper::toQuizResultResponse)
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * Lấy kết quả tốt nhất của student
      */
     @PreAuthorize("hasRole('STUDENT')")
-    public QuizResultResponse getBestScore(String quizId) {
-        log.info("Getting best score for quiz: {}", quizId);
+    public QuizResultResponse getBestScore(String quizId, String courseId) {
+        log.info("Getting best score for quiz: {} in course: {}", quizId, courseId);
+        
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
         
         User student = getCurrentUser();
+        Enrollment enrollment = getEnrollmentForCourse(courseId, student);
         
         List<QuizAttempt> attempts = quizAttemptRepository
-                .findByQuizIdAndStudentIdOrderByScoreDesc(quizId, student.getId());
+                .findByQuizIdAndStudentIdAndEnrollmentIdOrderByScoreDesc(quizId, student.getId(), enrollment.getId());
         
         if (attempts.isEmpty()) {
             throw new AppException(ErrorCode.NO_ATTEMPTS_FOUND);
@@ -279,6 +297,30 @@ public class QuizAttemptService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+    }
+
+    private Enrollment getEnrollmentForCourse(String courseId, User student) {
+        // Tìm enrollment cụ thể của student cho course này
+        return enrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_EXISTED));
+    }
+    
+    private Enrollment getCurrentEnrollmentForQuiz(Quiz quiz, User student) {
+        // Tìm enrollment của student cho course chứa quiz này
+        List<Enrollment> enrollments = enrollmentRepository.findByStudent(student);
+        
+        for (Enrollment enrollment : enrollments) {
+            // Kiểm tra xem quiz có thuộc course này không
+            boolean hasQuizInCourse = enrollment.getCourse().getCourseLessons()
+                    .stream()
+                    .anyMatch(cl -> cl.getLesson().getId().equals(quiz.getLesson().getId()));
+            
+            if (hasQuizInCourse) {
+                return enrollment;
+            }
+        }
+        
+        throw new AppException(ErrorCode.ENROLLMENT_NOT_EXISTED);
     }
     
     private void validateQuizAvailability(Quiz quiz, User student) {
@@ -307,6 +349,20 @@ public class QuizAttemptService {
                 );
         
         if (!hasAccess) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+    
+    private void validateQuizBelongsToCourse(Quiz quiz, String courseId) {
+        // Verify that the quiz's lesson belongs to the specified course
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        
+        boolean quizBelongsToCourse = course.getCourseLessons()
+                .stream()
+                .anyMatch(cl -> cl.getLesson().getId().equals(quiz.getLesson().getId()));
+        
+        if (!quizBelongsToCourse) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
     }
@@ -412,7 +468,8 @@ public class QuizAttemptService {
                     attempt.getStudent().getId(),
                     attempt.getQuiz().getLesson().getId(),
                     attempt.getQuiz().getId(),
-                    attempt.getScore()
+                    attempt.getPercentage(),
+                    attempt.getEnrollment().getId()
             );
         } catch (Exception e) {
             log.warn("Failed to update lesson progress for attempt: {}", attempt.getId(), e);

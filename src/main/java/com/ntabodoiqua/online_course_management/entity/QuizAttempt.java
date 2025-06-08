@@ -28,6 +28,11 @@ public class QuizAttempt {
     @JoinColumn(name = "student_id", nullable = false)
     User student;
     
+    // Thêm enrollment để tách biệt quiz attempts theo từng khóa học
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "enrollment_id", nullable = false)
+    Enrollment enrollment;
+    
     Integer attemptNumber; // Lần thử thứ mấy
     
     LocalDateTime startedAt;

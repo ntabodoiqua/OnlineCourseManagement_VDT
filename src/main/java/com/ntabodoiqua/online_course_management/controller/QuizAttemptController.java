@@ -26,13 +26,16 @@ public class QuizAttemptController {
     /**
      * Bắt đầu làm quiz
      * Chỉ Student có thể làm quiz
+     * Thêm courseId để xác định context khóa học cụ thể
      */
     @PostMapping("/quiz/{quizId}/start")
     @PreAuthorize("hasRole('STUDENT')")
-    public ApiResponse<QuizAttemptResponse> startQuizAttempt(@PathVariable String quizId) {
-        log.info("Starting quiz attempt for quiz: {}", quizId);
+    public ApiResponse<QuizAttemptResponse> startQuizAttempt(
+            @PathVariable String quizId,
+            @RequestParam String courseId) {
+        log.info("Starting quiz attempt for quiz: {} in course: {}", quizId, courseId);
         
-        QuizAttemptResponse attempt = quizAttemptService.startQuizAttempt(quizId);
+        QuizAttemptResponse attempt = quizAttemptService.startQuizAttempt(quizId, courseId);
         
         return ApiResponse.<QuizAttemptResponse>builder()
                 .message("Quiz attempt started successfully")
@@ -43,13 +46,16 @@ public class QuizAttemptController {
     /**
      * Lấy attempt hiện tại (nếu có)
      * Chỉ Student có thể xem attempt của mình
+     * Thêm courseId để xác định context khóa học cụ thể
      */
     @GetMapping("/quiz/{quizId}/current")
     @PreAuthorize("hasRole('STUDENT')")
-    public ApiResponse<QuizAttemptResponse> getCurrentAttempt(@PathVariable String quizId) {
-        log.info("Getting current attempt for quiz: {}", quizId);
+    public ApiResponse<QuizAttemptResponse> getCurrentAttempt(
+            @PathVariable String quizId,
+            @RequestParam String courseId) {
+        log.info("Getting current attempt for quiz: {} in course: {}", quizId, courseId);
         
-        QuizAttemptResponse attempt = quizAttemptService.getCurrentAttempt(quizId);
+        QuizAttemptResponse attempt = quizAttemptService.getCurrentAttempt(quizId, courseId);
         
         return ApiResponse.<QuizAttemptResponse>builder()
                 .message("Current attempt retrieved successfully")
@@ -94,33 +100,39 @@ public class QuizAttemptController {
                 .build();
     }
     
-    /**
+        /**
      * Lấy lịch sử làm bài của student cho một quiz
      * Chỉ Student có thể xem lịch sử của mình
+     * Thêm courseId để xác định context khóa học cụ thể
      */
     @GetMapping("/quiz/{quizId}/history")
     @PreAuthorize("hasRole('STUDENT')")
-    public ApiResponse<List<QuizResultResponse>> getStudentAttemptHistory(@PathVariable String quizId) {
-        log.info("Getting attempt history for quiz: {}", quizId);
+    public ApiResponse<List<QuizResultResponse>> getStudentAttemptHistory(
+            @PathVariable String quizId,
+            @RequestParam String courseId) {
+        log.info("Getting attempt history for quiz: {} in course: {}", quizId, courseId);
         
-        List<QuizResultResponse> history = quizAttemptService.getStudentAttemptHistory(quizId);
+        List<QuizResultResponse> history = quizAttemptService.getStudentAttemptHistory(quizId, courseId);
         
         return ApiResponse.<List<QuizResultResponse>>builder()
                 .message("Attempt history retrieved successfully")
                 .result(history)
                 .build();
     }
-    
+
     /**
      * Lấy điểm cao nhất của student cho một quiz
      * Chỉ Student có thể xem điểm của mình
+     * Thêm courseId để xác định context khóa học cụ thể
      */
     @GetMapping("/quiz/{quizId}/best-score")
     @PreAuthorize("hasRole('STUDENT')")
-    public ApiResponse<QuizResultResponse> getBestScore(@PathVariable String quizId) {
-        log.info("Getting best score for quiz: {}", quizId);
+    public ApiResponse<QuizResultResponse> getBestScore(
+            @PathVariable String quizId,
+            @RequestParam String courseId) {
+        log.info("Getting best score for quiz: {} in course: {}", quizId, courseId);
         
-        QuizResultResponse bestScore = quizAttemptService.getBestScore(quizId);
+        QuizResultResponse bestScore = quizAttemptService.getBestScore(quizId, courseId);
         
         return ApiResponse.<QuizResultResponse>builder()
                 .message("Best score retrieved successfully")
