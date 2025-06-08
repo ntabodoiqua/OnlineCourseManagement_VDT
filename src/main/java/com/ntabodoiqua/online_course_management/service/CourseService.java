@@ -299,13 +299,14 @@ public class CourseService {
      * Định nghĩa Course Response tùy quyền
      */
     private CourseResponse mapCourseToResponse(Course course, boolean full) {
+        CourseResponse response;
         if (full) {
             log.debug("Returning full course information for course: {}", course.getId());
-            return courseMapper.toCourseResponse(course);
+            response = courseMapper.toCourseResponse(course);
         } else {
             log.debug("Returning basic course information for course: {}", course.getId());
             // Trả về thông tin cơ bản mà student cần để quyết định đăng ký khóa học
-            return CourseResponse.builder()
+            response = CourseResponse.builder()
                     .id(course.getId())
                     .title(course.getTitle())
                     .description(course.getDescription())
@@ -319,6 +320,30 @@ public class CourseService {
                     .endDate(course.getEndDate())
                     .requiresApproval(course.isRequiresApproval())
                     .build();
+        }
+        
+        // Add rating information for both full and basic responses
+        enrichWithRatingData(response, course.getId());
+        return response;
+    }
+
+    /**
+     * Enrich CourseResponse with rating data
+     */
+    private void enrichWithRatingData(CourseResponse response, String courseId) {
+        try {
+            Double averageRating = courseReviewRepository.findAverageRatingByCourseId(courseId);
+            Long totalReviews = courseReviewRepository.countApprovedReviewsByCourseId(courseId);
+            
+            response.setAverageRating(averageRating);
+            response.setTotalReviews(totalReviews != null ? totalReviews.intValue() : 0);
+            
+            log.debug("Enriched course {} with rating data - Average: {}, Total reviews: {}", 
+                     courseId, averageRating, totalReviews);
+        } catch (Exception e) {
+            log.warn("Failed to enrich course {} with rating data: {}", courseId, e.getMessage());
+            response.setAverageRating(null);
+            response.setTotalReviews(0);
         }
     }
 
