@@ -5,11 +5,13 @@ import com.ntabodoiqua.online_course_management.dto.response.enrollment.Progress
 import com.ntabodoiqua.online_course_management.entity.Enrollment;
 import com.ntabodoiqua.online_course_management.entity.Lesson;
 import com.ntabodoiqua.online_course_management.entity.Progress;
+import com.ntabodoiqua.online_course_management.entity.Quiz;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.repository.EnrollmentRepository;
 import com.ntabodoiqua.online_course_management.repository.LessonRepository;
 import com.ntabodoiqua.online_course_management.repository.ProgressRepository;
+import com.ntabodoiqua.online_course_management.repository.QuizRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class ProgressService {
     ProgressRepository progressRepository;
     EnrollmentRepository enrollmentRepository;
     LessonRepository lessonRepository;
+    QuizRepository quizRepository;
 
     public List<ProgressResponse> getProgressByEnrollment(String enrollmentId) {
         List<Progress> progresses = progressRepository.findByEnrollmentId(enrollmentId);
@@ -39,7 +42,7 @@ public class ProgressService {
         Lesson lesson = lessonRepository.findById(request.getLessonId())
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         Progress progress = progressRepository.findByEnrollmentIdAndLessonId(request.getEnrollmentId(), request.getLessonId())
-                .orElse(new Progress(null, enrollment, lesson, false, null));
+                .orElse(new Progress(null, enrollment, lesson, false, null, null, null));
         progress.setCompleted(request.isCompleted());
         progress.setCompletionDate(request.isCompleted() ? LocalDate.now() : null);
         progressRepository.save(progress);
@@ -63,6 +66,52 @@ public class ProgressService {
             enrollment.setCompletionDate(null);
         }
         enrollmentRepository.save(enrollment);
+    }
+
+    @Transactional
+    public void updateQuizProgress(String studentId, String lessonId, String quizId, Double quizScore) {
+        // Find the enrollment for this student and the course containing this lesson
+        Lesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+                
+        // Find enrollment through the course-lesson relationship
+        // First, find the course that contains this lesson
+        List<Enrollment> studentEnrollments = enrollmentRepository.findAll()
+                .stream()
+                .filter(e -> e.getStudent().getId().equals(studentId))
+                .filter(e -> e.getCourse().getCourseLessons()
+                        .stream()
+                        .anyMatch(cl -> cl.getLesson().getId().equals(lessonId)))
+                .collect(java.util.stream.Collectors.toList());
+                
+        if (studentEnrollments.isEmpty()) {
+            throw new AppException(ErrorCode.ENROLLMENT_NOT_EXISTED);
+        }
+        
+        Enrollment enrollment = studentEnrollments.get(0);
+        
+        // Find or create progress record
+        Progress progress = progressRepository.findByEnrollmentIdAndLessonId(enrollment.getId(), lessonId)
+                .orElse(new Progress(null, enrollment, lesson, false, null, null, null));
+        
+        // Update quiz completion info
+        progress.setCompletedQuiz(quiz);
+        progress.setQuizScore(quizScore);
+        
+        // Mark lesson as completed if quiz is passed (assuming 60% is passing)
+        boolean isQuizPassed = quizScore != null && quizScore >= 60.0;
+        if (isQuizPassed) {
+            progress.setCompleted(true);
+            progress.setCompletionDate(LocalDate.now());
+        }
+        
+        progressRepository.save(progress);
+        
+        // Recalculate overall enrollment progress
+        recalculateAndSaveEnrollmentProgress(enrollment);
     }
 
     private ProgressResponse toResponse(Progress progress) {
