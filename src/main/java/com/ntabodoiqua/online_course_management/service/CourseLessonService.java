@@ -24,9 +24,11 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -238,5 +240,57 @@ public class CourseLessonService {
         CourseLesson courseLesson = courseLessonRepository.findById(courseLessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_LESSON_NOT_FOUND));
         return courseLessonMapper.toCourseLessonResponse(courseLesson);
+    }
+
+    /**
+     * Lấy danh sách bài học cho student với thông tin hạn chế
+     * Chỉ hiển thị tên bài học và mô tả cho khóa học active
+     */
+    public Page<CourseLessonResponse> getPublicLessonsOfCourse(String courseId, CourseLessonFilterRequest filter, Pageable pageable) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        
+        // Chỉ cho phép xem khóa học active
+        if (!course.isActive()) {
+            throw new AppException(ErrorCode.COURSE_NOT_ACTIVE);
+        }
+
+        // Lấy tất cả bài học visible của khóa học, sắp xếp theo orderIndex
+        List<CourseLesson> allCourseLessons = courseLessonRepository.findByCourseAndIsVisibleTrueOrderByOrderIndexAsc(course);
+
+        // Convert sang response với thông tin hạn chế
+        List<CourseLessonResponse> publicResponses = allCourseLessons.stream()
+                .map(this::mapToPublicCourseLessonResponse)
+                .collect(Collectors.toList());
+
+        // Tạo Page manually để phù hợp với Pageable
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), publicResponses.size());
+        
+        List<CourseLessonResponse> pagedContent = start < publicResponses.size() ? 
+                publicResponses.subList(start, end) : 
+                new ArrayList<>();
+
+        return new PageImpl<>(pagedContent, pageable, publicResponses.size());
+    }
+
+    /**
+     * Map CourseLesson sang response với thông tin hạn chế cho public
+     */
+    private CourseLessonResponse mapToPublicCourseLessonResponse(CourseLesson courseLesson) {
+        Lesson lesson = courseLesson.getLesson();
+        
+        return CourseLessonResponse.builder()
+                .id(courseLesson.getId())
+                .lesson(com.ntabodoiqua.online_course_management.dto.response.lesson.LessonResponse.builder()
+                        .id(lesson.getId())
+                        .title(lesson.getTitle())
+                        .description(lesson.getDescription())
+                        // Không hiển thị content, duration, hoặc thông tin chi tiết khác
+                        .build())
+                .orderIndex(courseLesson.getOrderIndex())
+                .isVisible(courseLesson.getIsVisible())
+                // Không hiển thị prerequisite để tránh lộ cấu trúc khóa học
+                .build();
     }
 }

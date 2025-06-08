@@ -35,6 +35,7 @@ public enum ErrorCode {
     CATEGORY_NOT_EXISTED(1021, "Category not existed", HttpStatus.NOT_FOUND),
     COURSE_EXISTED(1022, "Course existed", HttpStatus.BAD_REQUEST),
     COURSE_NOT_EXISTED(1023, "Course not existed", HttpStatus.NOT_FOUND),
+    COURSE_NOT_ACTIVE(1079, "Course is not active", HttpStatus.FORBIDDEN),
 
     // Lỗi file
     FILE_CANNOT_STORED(1024, "File cannot be stored", HttpStatus.INTERNAL_SERVER_ERROR),
