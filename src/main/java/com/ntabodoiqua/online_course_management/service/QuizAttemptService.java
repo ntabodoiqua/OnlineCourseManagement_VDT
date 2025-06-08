@@ -52,7 +52,7 @@ public class QuizAttemptService {
     /**
      * Bắt đầu làm quiz - tạo attempt mới
      */
-    @PreAuthorize("hasRole('STUDENT') or hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('STUDENT')")
     @Transactional
     public QuizAttemptResponse startQuizAttempt(String quizId) {
         log.info("Starting quiz attempt for quiz: {}", quizId);
