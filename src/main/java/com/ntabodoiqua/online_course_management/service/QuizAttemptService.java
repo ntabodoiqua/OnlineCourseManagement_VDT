@@ -682,17 +682,29 @@ public class QuizAttemptService {
         boolean isPassed = quiz.getPassingScore() != null ? 
                 percentage >= quiz.getPassingScore() : percentage >= 70.0;
         
+        // Calculate duration
+        LocalDateTime completedAt = LocalDateTime.now();
+        Long durationMinutes = null;
+        if (session.getStartedAt() != null) {
+            durationMinutes = java.time.Duration.between(session.getStartedAt(), completedAt).toMinutes();
+        }
+        
         return QuizResultResponse.builder()
                 .attemptId(session.getSessionId())
+                .quizId(quiz.getId())
                 .quizTitle(quiz.getTitle())
+                .startedAt(session.getStartedAt())
+                .completedAt(completedAt)
+                .durationMinutes(durationMinutes)
                 .score(earnedPoints)
                 .percentage(percentage)
                 .isPassed(isPassed)
                 .totalQuestions(totalQuestions)
                 .correctAnswers(correctAnswers)
                 .incorrectAnswers(answeredQuestions - correctAnswers)
+                .unansweredQuestions(totalQuestions - answeredQuestions)
                 .attemptNumber(1)
-                .completedAt(LocalDateTime.now())
+                .passingScore(quiz.getPassingScore())
                 .feedback("Preview completed - " + generatePreviewFeedback(percentage))
                 .canRetake(true) // Always true for preview
                 .remainingAttempts(-1) // Unlimited for preview
@@ -700,6 +712,18 @@ public class QuizAttemptService {
     }
     
     private String generatePreviewFeedback(double percentage) {
-        return "This is a preview result. " + generateFeedback(null);
+        String feedback;
+        if (percentage >= 90) {
+            feedback = "Excellent work! You have mastered this topic.";
+        } else if (percentage >= 80) {
+            feedback = "Great job! You have a solid understanding of the material.";
+        } else if (percentage >= 70) {
+            feedback = "Good work! You passed, but consider reviewing the material.";
+        } else if (percentage >= 60) {
+            feedback = "You're getting there. Review the material and try again.";
+        } else {
+            feedback = "Keep studying and practicing. Don't give up!";
+        }
+        return "This is a preview result. " + feedback;
     }
 } 

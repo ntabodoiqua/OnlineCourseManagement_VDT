@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,7 +60,7 @@ public class QuizService {
     /**
      * Lấy danh sách quiz với phân trang và lọc
      * - Admin: Xem tất cả quiz (kể cả inactive)
-     * - Instructor: Xem tất cả quiz active + quiz của mình (kể cả inactive)
+     * - Instructor: CHỈ xem quiz của chính mình (kể cả inactive)
      * - Student/Guest: Chỉ xem quiz active và available
      */
     public Page<QuizResponse> getQuizzes(QuizFilterRequest filter, Pageable pageable) {
@@ -68,12 +69,22 @@ public class QuizService {
         // Kiểm tra quyền truy cập
         QuizAccessInfo accessInfo = getCurrentUserAccessInfo();
         
-        // Tạo specification với phân quyền
-        Specification<Quiz> spec = QuizSpecification.withFilterAndPermission(
-                filter,
-                accessInfo.canViewInactive(),
-                accessInfo.instructorUsername()
-        );
+        // Tạo specification với phân quyền và auto-filter cho instructor
+        Specification<Quiz> spec;
+        
+        if ("INSTRUCTOR".equals(accessInfo.accessLevel())) {
+            // Instructor chỉ thấy quiz của mình trong trang quản lý
+            String currentUserId = getCurrentUser().getId();
+            spec = QuizSpecification.withFilter(filter)
+                    .and(QuizSpecification.byInstructorId(currentUserId));
+        } else {
+            // Admin hoặc Student/Guest sử dụng logic cũ
+            spec = QuizSpecification.withFilterAndPermission(
+                    filter,
+                    accessInfo.canViewInactive(),
+                    accessInfo.instructorUsername()
+            );
+        }
         
         // Lấy danh sách quiz
         Page<Quiz> quizPage = quizRepository.findAll(spec, pageable);
@@ -563,25 +574,51 @@ public class QuizService {
             throw new AppException(ErrorCode.QUESTION_NOT_FOUND);
         }
         
-        // Update order indices
-        for (QuestionOrderRequest orderRequest : orderRequests) {
-            QuizQuestion question = questions.stream()
-                    .filter(q -> q.getId().equals(orderRequest.getQuestionId()))
-                    .findFirst()
-                    .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
+        try {
+            // Get all existing questions for this quiz
+            List<QuizQuestion> allQuizQuestions = quizQuestionRepository.findByQuizIdOrderByOrderIndexAsc(quizId);
             
-            question.setOrderIndex(orderRequest.getOrderIndex());
-            question.setUpdatedAt(LocalDateTime.now());
+            // Create a map for quick lookup
+            Map<String, QuizQuestion> questionMap = allQuizQuestions.stream()
+                    .collect(Collectors.toMap(QuizQuestion::getId, q -> q));
+            
+            // Use a higher temporary base to avoid conflicts with existing order indices
+            int tempBase = 100000; // Much higher to avoid any possible conflicts
+            
+            // First phase: Move all questions to temporary indices to clear conflicts
+            for (int i = 0; i < allQuizQuestions.size(); i++) {
+                QuizQuestion question = allQuizQuestions.get(i);
+                question.setOrderIndex(tempBase + i);
+                quizQuestionRepository.save(question);
+            }
+            
+            // Flush to ensure temporary values are persisted
+            quizQuestionRepository.flush();
+            
+            // Second phase: Apply the new order indices
+            for (QuestionOrderRequest orderRequest : orderRequests) {
+                QuizQuestion question = questionMap.get(orderRequest.getQuestionId());
+                if (question != null) {
+                    question.setOrderIndex(orderRequest.getOrderIndex());
+                    question.setUpdatedAt(LocalDateTime.now());
+                    quizQuestionRepository.save(question);
+                }
+            }
+            
+            log.info("Successfully reordered {} questions for quiz {}", orderRequests.size(), quizId);
+            
+            // Fetch and return the updated questions
+            List<QuizQuestion> updatedQuestions = quizQuestionRepository.findByQuizIdOrderByOrderIndexAsc(quizId);
+            
+            return updatedQuestions.stream()
+                    .map(this::getQuestionWithAnswers)
+                    .sorted((q1, q2) -> Integer.compare(q1.getOrderIndex(), q2.getOrderIndex()))
+                    .collect(Collectors.toList());
+                    
+        } catch (Exception e) {
+            log.error("Error reordering questions for quiz {}: {}", quizId, e.getMessage(), e);
+            throw new AppException(ErrorCode.DATA_INTEGRITY_VIOLATION);
         }
-        
-        // Save all updated questions
-        List<QuizQuestion> updatedQuestions = quizQuestionRepository.saveAll(questions);
-        
-        // Return updated questions with answers
-        return updatedQuestions.stream()
-                .map(this::getQuestionWithAnswers)
-                .sorted((q1, q2) -> Integer.compare(q1.getOrderIndex(), q2.getOrderIndex()))
-                .collect(Collectors.toList());
     }
     
     // ================= QUIZ STATISTICS =================
