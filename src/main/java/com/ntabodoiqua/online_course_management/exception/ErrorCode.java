@@ -108,7 +108,12 @@ public enum ErrorCode {
     NO_ATTEMPTS_FOUND(1075, "No attempts found", HttpStatus.NOT_FOUND),
     QUIZ_NOT_STARTED(1076, "Quiz has not started yet", HttpStatus.BAD_REQUEST),
     QUIZ_EXPIRED(1077, "Quiz has expired", HttpStatus.BAD_REQUEST),
-    QUESTION_ORDER_INDEX_ALREADY_EXISTS(1078, "Question order index already exists in this quiz", HttpStatus.BAD_REQUEST),;
+    QUESTION_ORDER_INDEX_ALREADY_EXISTS(1078, "Question order index already exists in this quiz", HttpStatus.BAD_REQUEST),
+
+
+    // Lỗi khác
+    ADMIN_CANNOT_DELETE_SELF(1080, "Admin cannot delete themselves", HttpStatus.BAD_REQUEST),
+    ;
 
 
 

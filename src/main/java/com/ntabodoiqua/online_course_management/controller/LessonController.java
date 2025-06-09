@@ -5,6 +5,7 @@ import com.ntabodoiqua.online_course_management.dto.request.lesson.LessonFilterR
 import com.ntabodoiqua.online_course_management.dto.request.lesson.LessonRequest;
 import com.ntabodoiqua.online_course_management.dto.response.course.CourseResponse;
 import com.ntabodoiqua.online_course_management.dto.response.lesson.LessonResponse;
+import com.ntabodoiqua.online_course_management.dto.statistic.LessonQuizStatsDto;
 import com.ntabodoiqua.online_course_management.service.LessonService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,15 @@ public class LessonController {
         return ApiResponse.<List<CourseResponse>>builder()
                 .result(lessonService.getCoursesByLesson(lessonId))
                 .message("Courses for lesson fetched successfully")
+                .build();
+    }
+
+    @GetMapping("/{lessonId}/course/{courseId}/quiz-stats")
+    public ApiResponse<LessonQuizStatsDto> getLessonQuizStatsInCourse(
+            @PathVariable String lessonId, @PathVariable String courseId) {
+        return ApiResponse.<LessonQuizStatsDto>builder()
+                .result(lessonService.getLessonQuizStatsInCourse(lessonId, courseId))
+                .message("Quiz statistics fetched successfully")
                 .build();
     }
 

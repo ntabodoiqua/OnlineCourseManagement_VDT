@@ -3,6 +3,7 @@ package com.ntabodoiqua.online_course_management.repository;
 import com.ntabodoiqua.online_course_management.entity.Quiz;
 import com.ntabodoiqua.online_course_management.entity.QuizAttempt;
 import com.ntabodoiqua.online_course_management.entity.User;
+import com.ntabodoiqua.online_course_management.entity.Enrollment;
 import com.ntabodoiqua.online_course_management.enums.AttemptStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,10 @@ import java.util.Optional;
 
 @Repository
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String>, JpaSpecificationExecutor<QuizAttempt> {
+    
+    List<QuizAttempt> findByQuizAndStudentIn(Quiz quiz, List<User> students);
+    
+    List<QuizAttempt> findByQuizAndEnrollmentIn(Quiz quiz, List<Enrollment> enrollments);
     
     // Tìm attempt theo quiz và student
     List<QuizAttempt> findByQuizIdAndStudentIdOrderByAttemptNumberDesc(String quizId, String studentId);
