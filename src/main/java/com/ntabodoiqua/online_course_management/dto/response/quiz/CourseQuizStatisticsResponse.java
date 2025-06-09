@@ -18,6 +18,7 @@ public class CourseQuizStatisticsResponse {
     
     List<ScoreDistributionItem> scoreDistribution;
     List<GradeDistributionItem> gradeDistribution;
+    List<QuizPerformanceItem> quizPerformance;
     
     @Data
     @NoArgsConstructor
@@ -38,5 +39,17 @@ public class CourseQuizStatisticsResponse {
         String name;
         Integer count;
         String color;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @FieldDefaults(level = AccessLevel.PRIVATE)
+    public static class QuizPerformanceItem {
+        String quizId;
+        String quizTitle;
+        Long passedCount;
+        Long failedCount;
     }
 } 

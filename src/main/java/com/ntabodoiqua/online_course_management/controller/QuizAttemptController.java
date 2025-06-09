@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/quiz-attempts")
@@ -266,6 +267,13 @@ public class QuizAttemptController {
         return ApiResponse.<List<StudentQuizHistoryResponse>>builder()
                 .message("Student quiz history retrieved successfully")
                 .result(history)
+                .build();
+    }
+
+    @GetMapping("/over-time/{quizId}")
+    public ApiResponse<List<Map<String, Object>>> getQuizAttemptsOverTime(@PathVariable String quizId) {
+        return ApiResponse.<List<Map<String, Object>>>builder()
+                .result(quizAttemptService.getQuizAttemptsOverTime(quizId))
                 .build();
     }
 } 

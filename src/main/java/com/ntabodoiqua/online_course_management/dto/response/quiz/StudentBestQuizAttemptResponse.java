@@ -27,6 +27,7 @@ public class StudentBestQuizAttemptResponse {
     String attemptId;
     Integer attemptNumber;
     Double score;
+    Double maxScore;
     Double percentage;
     @JsonProperty("isPassed")
     Boolean isPassed;

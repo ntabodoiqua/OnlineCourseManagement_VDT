@@ -19,6 +19,7 @@ public class StudentQuizHistoryResponse {
     
     Integer attemptNumber;
     Double score;
+    Double maxScore;
     Double percentage;
     
     @JsonProperty("isPassed")
