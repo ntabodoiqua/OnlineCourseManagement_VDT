@@ -15,6 +15,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -282,7 +285,7 @@ public class QuizAttemptService {
         Enrollment enrollment = getEnrollmentForCourse(courseId, student);
         
         List<QuizAttempt> attempts = quizAttemptRepository
-                .findByQuizIdAndStudentIdAndEnrollmentIdOrderByScoreDesc(quizId, student.getId(), enrollment.getId());
+                .findBestScoreByQuizAndStudentInEnrollment(quizId, student.getId(), enrollment.getId());
         
         if (attempts.isEmpty()) {
             throw new AppException(ErrorCode.NO_ATTEMPTS_FOUND);
@@ -566,32 +569,77 @@ public class QuizAttemptService {
      * Chỉ Instructor hoặc Admin có thể xem
      */
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
-    public List<StudentQuizResultResponse> getCourseStudentQuizResults(String courseId) {
-        log.info("Getting student quiz results for course: {}", courseId);
-        
+    public Page<StudentBestQuizAttemptResponse> getCourseStudentQuizResults(String courseId, Pageable pageable) {
+        log.info("Getting best student quiz results for each quiz in course: {}", courseId);
+
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
-        
-        // Validate permission
+
         validateCourseAccess(course);
-        
-        // Get all students enrolled in this course
+
         List<Enrollment> enrollments = enrollmentRepository.findByCourse(course);
-        
-        // Get all quizzes in this course
-        List<Quiz> courseQuizzes = getCourseQuizzes(course);
-        
-        if (courseQuizzes.isEmpty()) {
-            return Collections.emptyList();
+        if (enrollments.isEmpty()) {
+            return Page.empty(pageable);
         }
-        
-        List<String> quizIds = courseQuizzes.stream()
-                .map(Quiz::getId)
-                .collect(Collectors.toList());
-        
-        return enrollments.stream()
-                .map(enrollment -> buildStudentQuizResult(enrollment.getStudent(), quizIds, enrollment.getId()))
-                .collect(Collectors.toList());
+
+        List<Quiz> courseQuizzes = getCourseQuizzes(course);
+        if (courseQuizzes.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        List<String> quizIds = courseQuizzes.stream().map(Quiz::getId).collect(Collectors.toList());
+        Map<String, Quiz> quizMap = courseQuizzes.stream().collect(Collectors.toMap(Quiz::getId, q -> q));
+
+        List<String> enrollmentIds = enrollments.stream().map(Enrollment::getId).collect(Collectors.toList());
+        Map<String, User> studentMap = enrollments.stream()
+                .collect(Collectors.toMap(e -> e.getStudent().getId(), Enrollment::getStudent, (existing, replacement) -> existing));
+
+        // 1. Fetch all completed attempts for all students IN THIS COURSE for the relevant quizzes
+        List<QuizAttempt> allAttempts = quizAttemptRepository.findByEnrollmentIdInAndQuizIdInAndStatus(enrollmentIds, quizIds, AttemptStatus.COMPLETED);
+
+        // 2. Group attempts by student, then by quiz, and find the one with the max score
+        Map<String, Map<String, Optional<QuizAttempt>>> bestAttemptsByStudentAndQuiz = allAttempts.stream()
+                .collect(Collectors.groupingBy(
+                        attempt -> attempt.getStudent().getId(),
+                        Collectors.groupingBy(
+                                attempt -> attempt.getQuiz().getId(),
+                                Collectors.maxBy(Comparator.comparing(QuizAttempt::getScore))
+                        )
+                ));
+
+        List<StudentBestQuizAttemptResponse> results = new ArrayList<>();
+
+        bestAttemptsByStudentAndQuiz.forEach((sId, quizBestAttemptMap) -> {
+            User student = studentMap.get(sId);
+            if (student == null) return; // Skip if student not found in current course enrollments
+            
+            quizBestAttemptMap.forEach((qId, bestAttemptOpt) -> {
+                bestAttemptOpt.ifPresent(bestAttempt -> {
+                    Quiz quiz = quizMap.get(qId);
+                    results.add(StudentBestQuizAttemptResponse.builder()
+                            .studentId(student.getId())
+                            .studentUsername(student.getUsername())
+                            .studentFirstName(student.getFirstName())
+                            .studentLastName(student.getLastName())
+                            .studentEmail(student.getEmail())
+                            .quizId(quiz.getId())
+                            .quizTitle(quiz.getTitle())
+                            .attemptId(bestAttempt.getId())
+                            .attemptNumber(bestAttempt.getAttemptNumber())
+                            .score(bestAttempt.getScore())
+                            .percentage(bestAttempt.getPercentage())
+                            .isPassed(bestAttempt.getIsPassed())
+                            .completedAt(bestAttempt.getCompletedAt())
+                            .build());
+                });
+            });
+        });
+
+        // 3. Paginate the final list
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), results.size());
+        List<StudentBestQuizAttemptResponse> pageContent = (start > results.size()) ? Collections.emptyList() : results.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, results.size());
     }
     
     /**
@@ -1013,78 +1061,6 @@ public class QuizAttemptService {
         }
         
         return result;
-    }
-    
-    private StudentQuizResultResponse buildStudentQuizResult(User student, List<String> quizIds, String enrollmentId) {
-        List<QuizAttempt> studentAttempts = quizAttemptRepository
-                .findByStudentIdAndEnrollmentIdAndQuizIdInAndStatus(
-                        student.getId(), enrollmentId, quizIds, AttemptStatus.COMPLETED);
-        
-        if (studentAttempts.isEmpty()) {
-            return StudentQuizResultResponse.builder()
-                    .studentId(student.getId())
-                    .studentUsername(student.getUsername())
-                    .studentFirstName(student.getFirstName())
-                    .studentLastName(student.getLastName())
-                    .studentEmail(student.getEmail())
-                    .totalAttempts(0)
-                    .bestScore(0.0)
-                    .averageScore(0.0)
-                    .percentage(0.0)
-                    .lastAttemptDate(null)
-                    .status("NOT_ATTEMPTED")
-                    .build();
-        }
-        
-        // Calculate statistics
-        double bestScore = studentAttempts.stream()
-                .mapToDouble(QuizAttempt::getScore)
-                .max()
-                .orElse(0.0);
-        
-        double averageScore = studentAttempts.stream()
-                .mapToDouble(QuizAttempt::getScore)
-                .average()
-                .orElse(0.0);
-        // Lấy ra điểm phần trăm cao nhất của học viên trong
-        double percentage = studentAttempts.stream()
-                .filter(attempt -> attempt.getPercentage() != null && !Double.isNaN(attempt.getPercentage()) && attempt.getPercentage() >= 0.0)
-                .mapToDouble(QuizAttempt::getPercentage)
-                .max()
-                .orElse(0.0);
-        
-        // Additional validation - percentage should not exceed 100%
-        if (percentage > 100.0) {
-            log.warn("Percentage exceeds 100% for student {} in enrollment {}: {}. Capping to 100%", 
-                    student.getId(), enrollmentId, percentage);
-            percentage = 100.0;
-        }
-
-        LocalDateTime lastAttemptDate = studentAttempts.stream()
-                .map(QuizAttempt::getCompletedAt)
-                .filter(Objects::nonNull)
-                .max(LocalDateTime::compareTo)
-                .orElse(null);
-        
-        String status = studentAttempts.stream()
-                .anyMatch(QuizAttempt::getIsPassed) ? "PASSED" : "FAILED";
-        
-        log.debug("Calculated student quiz result - Student: {}, Attempts: {}, Best Score: {}, Best Percentage: {}", 
-                student.getId(), studentAttempts.size(), bestScore, percentage);
-        
-        return StudentQuizResultResponse.builder()
-                .studentId(student.getId())
-                .studentUsername(student.getUsername())
-                .studentFirstName(student.getFirstName())
-                .studentLastName(student.getLastName())
-                .studentEmail(student.getEmail())
-                .totalAttempts(studentAttempts.size())
-                .bestScore(bestScore)
-                .averageScore(averageScore)
-                .percentage(percentage)
-                .lastAttemptDate(lastAttemptDate)
-                .status(status)
-                .build();
     }
     
     private StudentQuizHistoryResponse buildStudentQuizHistory(QuizAttempt attempt) {

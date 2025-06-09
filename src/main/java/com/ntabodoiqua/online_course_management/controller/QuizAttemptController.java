@@ -8,6 +8,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -237,12 +239,12 @@ public class QuizAttemptController {
      */
     @GetMapping("/course/{courseId}/student-results")
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
-    public ApiResponse<List<StudentQuizResultResponse>> getCourseStudentQuizResults(@PathVariable String courseId) {
+    public ApiResponse<Page<StudentBestQuizAttemptResponse>> getCourseStudentQuizResults(@PathVariable String courseId, Pageable pageable) {
         log.info("Getting student quiz results for course: {}", courseId);
-        
-        List<StudentQuizResultResponse> results = quizAttemptService.getCourseStudentQuizResults(courseId);
-        
-        return ApiResponse.<List<StudentQuizResultResponse>>builder()
+
+        Page<StudentBestQuizAttemptResponse> results = quizAttemptService.getCourseStudentQuizResults(courseId, pageable);
+
+        return ApiResponse.<Page<StudentBestQuizAttemptResponse>>builder()
                 .message("Student quiz results retrieved successfully")
                 .result(results)
                 .build();

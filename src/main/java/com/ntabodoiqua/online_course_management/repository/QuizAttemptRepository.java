@@ -46,12 +46,9 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String
     Optional<QuizAttempt> findFirstByQuizIdAndStudentIdOrderByAttemptNumberDesc(String quizId, String studentId);
     Optional<QuizAttempt> findFirstByQuizIdAndStudentIdAndEnrollmentIdOrderByAttemptNumberDesc(String quizId, String studentId, String enrollmentId);
     
-    // Tìm attempt có điểm cao nhất của student cho quiz
-    @Query("SELECT qa FROM QuizAttempt qa WHERE qa.quiz.id = :quizId AND qa.student.id = :studentId AND qa.status = 'COMPLETED' ORDER BY qa.score DESC")
-    List<QuizAttempt> findByQuizIdAndStudentIdOrderByScoreDesc(@Param("quizId") String quizId, @Param("studentId") String studentId);
-    
+    // Tìm attempt có điểm cao nhất của student cho quiz trong một enrollment cụ thể
     @Query("SELECT qa FROM QuizAttempt qa WHERE qa.quiz.id = :quizId AND qa.student.id = :studentId AND qa.enrollment.id = :enrollmentId AND qa.status = 'COMPLETED' ORDER BY qa.score DESC")
-    List<QuizAttempt> findByQuizIdAndStudentIdAndEnrollmentIdOrderByScoreDesc(@Param("quizId") String quizId, @Param("studentId") String studentId, @Param("enrollmentId") String enrollmentId);
+    List<QuizAttempt> findBestScoreByQuizAndStudentInEnrollment(@Param("quizId") String quizId, @Param("studentId") String studentId, @Param("enrollmentId") String enrollmentId);
     
     // Đếm số lần attempt
     long countByQuizIdAndStudentId(String quizId, String studentId);
@@ -110,4 +107,7 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String
     
     @Query("SELECT qa FROM QuizAttempt qa WHERE qa.student.id = :studentId AND qa.enrollment.id = :enrollmentId AND qa.quiz.id IN :quizIds AND qa.status = :status ORDER BY qa.completedAt DESC")
     List<QuizAttempt> findByStudentIdAndEnrollmentIdAndQuizIdInAndStatusOrderByCompletedAtDesc(@Param("studentId") String studentId, @Param("enrollmentId") String enrollmentId, @Param("quizIds") List<String> quizIds, @Param("status") AttemptStatus status);
+
+    @Query("SELECT qa FROM QuizAttempt qa WHERE qa.enrollment.id IN :enrollmentIds AND qa.quiz.id IN :quizIds AND qa.status = :status")
+    List<QuizAttempt> findByEnrollmentIdInAndQuizIdInAndStatus(@Param("enrollmentIds") List<String> enrollmentIds, @Param("quizIds") List<String> quizIds, @Param("status") AttemptStatus status);
 } 
