@@ -4,7 +4,6 @@ import com.ntabodoiqua.online_course_management.dto.request.quiz.*;
 import com.ntabodoiqua.online_course_management.dto.response.quiz.*;
 import com.ntabodoiqua.online_course_management.entity.*;
 import com.ntabodoiqua.online_course_management.enums.AttemptStatus;
-import com.ntabodoiqua.online_course_management.enums.ScoringMethod;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.quiz.QuizMapperFacade;
@@ -40,6 +39,7 @@ public class QuizAttemptService {
     UserRepository userRepository;
     EnrollmentRepository enrollmentRepository;
     CourseRepository courseRepository;
+    CourseLessonRepository courseLessonRepository;
     ProgressService progressService;
     
     QuizMapperFacade quizMapperFacade;
@@ -519,6 +519,122 @@ public class QuizAttemptService {
             return "Keep studying and practicing. Don't give up!";
         }
     }
+
+    // ================= COURSE-LEVEL QUIZ STATISTICS =================
+    
+    /**
+     * Lấy thống kê quiz tổng quan của course
+     * Chỉ Instructor hoặc Admin có thể xem
+     */
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public CourseQuizStatisticsResponse getCourseQuizStatistics(String courseId) {
+        log.info("Getting quiz statistics for course: {}", courseId);
+        
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        
+        // Validate permission
+        validateCourseAccess(course);
+        
+        // Get all quizzes in this course
+        List<Quiz> courseQuizzes = getCourseQuizzes(course);
+        
+        if (courseQuizzes.isEmpty()) {
+            return CourseQuizStatisticsResponse.builder()
+                    .totalQuizzes(0)
+                    .totalAttempts(0)
+                    .averageScore(0.0)
+                    .passRate(0.0)
+                    .scoreDistribution(Collections.emptyList())
+                    .gradeDistribution(Collections.emptyList())
+                    .build();
+        }
+        
+        // Get all completed attempts for these quizzes
+        List<String> quizIds = courseQuizzes.stream()
+                .map(Quiz::getId)
+                .collect(Collectors.toList());
+        
+        List<QuizAttempt> completedAttempts = quizAttemptRepository.findCompletedAttemptsByQuizIds(quizIds);
+        
+        // Calculate statistics
+        return buildCourseQuizStatistics(courseQuizzes, completedAttempts);
+    }
+    
+    /**
+     * Lấy kết quả quiz của tất cả students trong course
+     * Chỉ Instructor hoặc Admin có thể xem
+     */
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public List<StudentQuizResultResponse> getCourseStudentQuizResults(String courseId) {
+        log.info("Getting student quiz results for course: {}", courseId);
+        
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        
+        // Validate permission
+        validateCourseAccess(course);
+        
+        // Get all students enrolled in this course
+        List<Enrollment> enrollments = enrollmentRepository.findByCourse(course);
+        
+        // Get all quizzes in this course
+        List<Quiz> courseQuizzes = getCourseQuizzes(course);
+        
+        if (courseQuizzes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        List<String> quizIds = courseQuizzes.stream()
+                .map(Quiz::getId)
+                .collect(Collectors.toList());
+        
+        return enrollments.stream()
+                .map(enrollment -> buildStudentQuizResult(enrollment.getStudent(), quizIds, enrollment.getId()))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Lấy lịch sử quiz của 1 student trong course
+     * Chỉ Instructor hoặc Admin có thể xem
+     */
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public List<StudentQuizHistoryResponse> getStudentQuizHistoryInCourse(String courseId, String studentId) {
+        log.info("Getting quiz history for student {} in course {}", studentId, courseId);
+        
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_EXISTED));
+        
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        
+        // Validate permission
+        validateCourseAccess(course);
+        
+        // Check if student is enrolled in this course
+        Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_EXISTED));
+        
+        // Get all quizzes in this course
+        List<Quiz> courseQuizzes = getCourseQuizzes(course);
+        
+        if (courseQuizzes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        List<String> quizIds = courseQuizzes.stream()
+                .map(Quiz::getId)
+                .collect(Collectors.toList());
+        
+        // Get all completed attempts for this student in this course
+        List<QuizAttempt> attempts = quizAttemptRepository
+                .findByStudentIdAndEnrollmentIdAndQuizIdInAndStatusOrderByCompletedAtDesc(
+                        studentId, enrollment.getId(), quizIds, AttemptStatus.COMPLETED);
+        
+        return attempts.stream()
+                .map(this::buildStudentQuizHistory)
+                .collect(Collectors.toList());
+    }
     
     // ================= QUIZ PREVIEW METHODS =================
     
@@ -768,6 +884,236 @@ public class QuizAttemptService {
                 .build();
     }
     
+    // ================= COURSE-LEVEL STATISTICS HELPER METHODS =================
+    
+    private void validateCourseAccess(Course course) {
+        User currentUser = getCurrentUser();
+        
+        // Admin can access any course
+        boolean isAdmin = currentUser.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+        
+        if (isAdmin) {
+            return;
+        }
+        
+        // Instructor can access their own courses
+        boolean isOwner = course.getInstructor().getId().equals(currentUser.getId());
+        if (!isOwner) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+    
+    private List<Quiz> getCourseQuizzes(Course course) {
+        List<CourseLesson> courseLessons = courseLessonRepository.findByCourseOrderByOrderIndexAsc(course);
+        
+        return courseLessons.stream()
+                .map(CourseLesson::getLesson)
+                .map(Lesson::getQuiz)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+    
+    private CourseQuizStatisticsResponse buildCourseQuizStatistics(List<Quiz> courseQuizzes, List<QuizAttempt> completedAttempts) {
+        int totalQuizzes = courseQuizzes.size();
+        int totalAttempts = completedAttempts.size();
+        
+        if (totalAttempts == 0) {
+            return CourseQuizStatisticsResponse.builder()
+                    .totalQuizzes(totalQuizzes)
+                    .totalAttempts(0)
+                    .averageScore(0.0)
+                    .passRate(0.0)
+                    .scoreDistribution(Collections.emptyList())
+                    .gradeDistribution(Collections.emptyList())
+                    .build();
+        }
+        
+        // Calculate average score and pass rate
+        double totalScore = completedAttempts.stream()
+                .mapToDouble(QuizAttempt::getScore)
+                .sum();
+        double averageScore = totalScore / totalAttempts;
+        
+        long passedAttempts = completedAttempts.stream()
+                .mapToLong(attempt -> attempt.getIsPassed() ? 1 : 0)
+                .sum();
+        double passRate = (double) passedAttempts / totalAttempts * 100;
+        
+        // Build score distribution
+        List<CourseQuizStatisticsResponse.ScoreDistributionItem> scoreDistribution = buildScoreDistribution(completedAttempts);
+        
+        // Build grade distribution
+        List<CourseQuizStatisticsResponse.GradeDistributionItem> gradeDistribution = buildGradeDistribution(completedAttempts);
+        
+        return CourseQuizStatisticsResponse.builder()
+                .totalQuizzes(totalQuizzes)
+                .totalAttempts(totalAttempts)
+                .averageScore(averageScore)
+                .passRate(passRate)
+                .scoreDistribution(scoreDistribution)
+                .gradeDistribution(gradeDistribution)
+                .build();
+    }
+    
+    private List<CourseQuizStatisticsResponse.ScoreDistributionItem> buildScoreDistribution(List<QuizAttempt> attempts) {
+        Map<String, Long> distribution = attempts.stream()
+                .collect(Collectors.groupingBy(
+                        attempt -> {
+                            double score = attempt.getScore();
+                            if (score >= 9) return "9-10";
+                            else if (score >= 8) return "8-9";
+                            else if (score >= 7) return "7-8";
+                            else if (score >= 6) return "6-7";
+                            else if (score >= 5) return "5-6";
+                            else if (score >= 4) return "4-5";
+                            else if (score >= 3) return "3-4";
+                            else if (score >= 2) return "2-3";
+                            else if (score >= 1) return "1-2";
+                            else return "0-1";
+                        },
+                        Collectors.counting()
+                ));
+        
+        return distribution.entrySet().stream()
+                .map(entry -> CourseQuizStatisticsResponse.ScoreDistributionItem.builder()
+                        .range(entry.getKey())
+                        .count(entry.getValue().intValue())
+                        .build())
+                .sorted((a, b) -> Float.compare(Float.parseFloat(b.getRange().split("-")[0]), 
+                                               Float.parseFloat(a.getRange().split("-")[0])))
+                .collect(Collectors.toList());
+    }
+    
+    private List<CourseQuizStatisticsResponse.GradeDistributionItem> buildGradeDistribution(List<QuizAttempt> attempts) {
+        Map<String, Long> distribution = attempts.stream()
+                .collect(Collectors.groupingBy(
+                        attempt -> {
+                            double percentage = attempt.getPercentage();
+                            if (percentage >= 90) return "Xuất sắc";
+                            else if (percentage >= 80) return "Giỏi";
+                            else if (percentage >= 70) return "Khá";
+                            else if (percentage >= 50) return "Trung bình";
+                            else return "Yếu";
+                        },
+                        Collectors.counting()
+                ));
+        
+        String[] grades = {"Xuất sắc", "Giỏi", "Khá", "Trung bình", "Yếu"};
+        String[] colors = {"#52c41a", "#1890ff", "#faad14", "#fa8c16", "#ff4d4f"};
+        
+        List<CourseQuizStatisticsResponse.GradeDistributionItem> result = new ArrayList<>();
+        for (int i = 0; i < grades.length; i++) {
+            long count = distribution.getOrDefault(grades[i], 0L);
+            result.add(CourseQuizStatisticsResponse.GradeDistributionItem.builder()
+                    .name(grades[i])
+                    .count((int) count)
+                    .color(colors[i])
+                    .build());
+        }
+        
+        return result;
+    }
+    
+    private StudentQuizResultResponse buildStudentQuizResult(User student, List<String> quizIds, String enrollmentId) {
+        List<QuizAttempt> studentAttempts = quizAttemptRepository
+                .findByStudentIdAndEnrollmentIdAndQuizIdInAndStatus(
+                        student.getId(), enrollmentId, quizIds, AttemptStatus.COMPLETED);
+        
+        if (studentAttempts.isEmpty()) {
+            return StudentQuizResultResponse.builder()
+                    .studentId(student.getId())
+                    .studentUsername(student.getUsername())
+                    .studentFirstName(student.getFirstName())
+                    .studentLastName(student.getLastName())
+                    .studentEmail(student.getEmail())
+                    .totalAttempts(0)
+                    .bestScore(0.0)
+                    .averageScore(0.0)
+                    .percentage(0.0)
+                    .lastAttemptDate(null)
+                    .status("NOT_ATTEMPTED")
+                    .build();
+        }
+        
+        // Calculate statistics
+        double bestScore = studentAttempts.stream()
+                .mapToDouble(QuizAttempt::getScore)
+                .max()
+                .orElse(0.0);
+        
+        double averageScore = studentAttempts.stream()
+                .mapToDouble(QuizAttempt::getScore)
+                .average()
+                .orElse(0.0);
+        // Lấy ra điểm phần trăm cao nhất của học viên trong
+        double percentage = studentAttempts.stream()
+                .filter(attempt -> attempt.getPercentage() != null && !Double.isNaN(attempt.getPercentage()) && attempt.getPercentage() >= 0.0)
+                .mapToDouble(QuizAttempt::getPercentage)
+                .max()
+                .orElse(0.0);
+        
+        // Additional validation - percentage should not exceed 100%
+        if (percentage > 100.0) {
+            log.warn("Percentage exceeds 100% for student {} in enrollment {}: {}. Capping to 100%", 
+                    student.getId(), enrollmentId, percentage);
+            percentage = 100.0;
+        }
+
+        LocalDateTime lastAttemptDate = studentAttempts.stream()
+                .map(QuizAttempt::getCompletedAt)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+        
+        String status = studentAttempts.stream()
+                .anyMatch(QuizAttempt::getIsPassed) ? "PASSED" : "FAILED";
+        
+        log.debug("Calculated student quiz result - Student: {}, Attempts: {}, Best Score: {}, Best Percentage: {}", 
+                student.getId(), studentAttempts.size(), bestScore, percentage);
+        
+        return StudentQuizResultResponse.builder()
+                .studentId(student.getId())
+                .studentUsername(student.getUsername())
+                .studentFirstName(student.getFirstName())
+                .studentLastName(student.getLastName())
+                .studentEmail(student.getEmail())
+                .totalAttempts(studentAttempts.size())
+                .bestScore(bestScore)
+                .averageScore(averageScore)
+                .percentage(percentage)
+                .lastAttemptDate(lastAttemptDate)
+                .status(status)
+                .build();
+    }
+    
+    private StudentQuizHistoryResponse buildStudentQuizHistory(QuizAttempt attempt) {
+        Quiz quiz = attempt.getQuiz();
+        Lesson lesson = quiz.getLesson();
+        
+        Integer duration = null;
+        if (attempt.getStartedAt() != null && attempt.getCompletedAt() != null) {
+            duration = (int) java.time.Duration.between(attempt.getStartedAt(), attempt.getCompletedAt()).toMinutes();
+        }
+        
+        return StudentQuizHistoryResponse.builder()
+                .attemptId(attempt.getId())
+                .quizId(quiz.getId())
+                .quizTitle(quiz.getTitle())
+                .lessonTitle(lesson.getTitle())
+                .attemptNumber(attempt.getAttemptNumber())
+                .score(attempt.getScore())
+                .percentage(attempt.getPercentage())
+                .isPassed(attempt.getIsPassed())
+                .startedAt(attempt.getStartedAt())
+                .completedAt(attempt.getCompletedAt())
+                .duration(duration)
+                .totalQuestions(attempt.getTotalQuestions())
+                .correctAnswers(attempt.getCorrectAnswers())
+                .incorrectAnswers(attempt.getIncorrectAnswers())
+                .build();
+    }
+
     private String generatePreviewFeedback(double percentage) {
         String feedback;
         if (percentage >= 90) {
@@ -783,4 +1129,4 @@ public class QuizAttemptService {
         }
         return "This is a preview result. " + feedback;
     }
-} 
+}

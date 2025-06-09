@@ -211,4 +211,59 @@ public class QuizAttemptController {
                 .result(status)
                 .build();
     }
+    
+    // =============== COURSE-LEVEL QUIZ STATISTICS ===============
+    
+    /**
+     * Lấy thống kê quiz tổng quan của course
+     * Chỉ Instructor hoặc Admin có thể xem
+     */
+    @GetMapping("/course/{courseId}/statistics")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ApiResponse<CourseQuizStatisticsResponse> getCourseQuizStatistics(@PathVariable String courseId) {
+        log.info("Getting quiz statistics for course: {}", courseId);
+        
+        CourseQuizStatisticsResponse statistics = quizAttemptService.getCourseQuizStatistics(courseId);
+        
+        return ApiResponse.<CourseQuizStatisticsResponse>builder()
+                .message("Course quiz statistics retrieved successfully")
+                .result(statistics)
+                .build();
+    }
+    
+    /**
+     * Lấy kết quả quiz của tất cả students trong course
+     * Chỉ Instructor hoặc Admin có thể xem
+     */
+    @GetMapping("/course/{courseId}/student-results")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ApiResponse<List<StudentQuizResultResponse>> getCourseStudentQuizResults(@PathVariable String courseId) {
+        log.info("Getting student quiz results for course: {}", courseId);
+        
+        List<StudentQuizResultResponse> results = quizAttemptService.getCourseStudentQuizResults(courseId);
+        
+        return ApiResponse.<List<StudentQuizResultResponse>>builder()
+                .message("Student quiz results retrieved successfully")
+                .result(results)
+                .build();
+    }
+    
+    /**
+     * Lấy lịch sử quiz của 1 student trong course
+     * Chỉ Instructor hoặc Admin có thể xem
+     */
+    @GetMapping("/course/{courseId}/student/{studentId}/history")
+    @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
+    public ApiResponse<List<StudentQuizHistoryResponse>> getStudentQuizHistoryInCourse(
+            @PathVariable String courseId,
+            @PathVariable String studentId) {
+        log.info("Getting quiz history for student {} in course {}", studentId, courseId);
+        
+        List<StudentQuizHistoryResponse> history = quizAttemptService.getStudentQuizHistoryInCourse(courseId, studentId);
+        
+        return ApiResponse.<List<StudentQuizHistoryResponse>>builder()
+                .message("Student quiz history retrieved successfully")
+                .result(history)
+                .build();
+    }
 } 

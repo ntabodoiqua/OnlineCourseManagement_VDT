@@ -100,4 +100,14 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String
     // Tìm attempt hết hạn (đang in progress quá lâu)
     @Query("SELECT qa FROM QuizAttempt qa WHERE qa.status = 'IN_PROGRESS' AND qa.startedAt < :cutoffTime")
     List<QuizAttempt> findExpiredInProgressAttempts(@Param("cutoffTime") LocalDateTime cutoffTime);
+    
+    // Course-level quiz statistics methods
+    @Query("SELECT qa FROM QuizAttempt qa WHERE qa.quiz.id IN :quizIds AND qa.status = 'COMPLETED'")
+    List<QuizAttempt> findCompletedAttemptsByQuizIds(@Param("quizIds") List<String> quizIds);
+    
+    @Query("SELECT qa FROM QuizAttempt qa WHERE qa.student.id = :studentId AND qa.enrollment.id = :enrollmentId AND qa.quiz.id IN :quizIds AND qa.status = :status")
+    List<QuizAttempt> findByStudentIdAndEnrollmentIdAndQuizIdInAndStatus(@Param("studentId") String studentId, @Param("enrollmentId") String enrollmentId, @Param("quizIds") List<String> quizIds, @Param("status") AttemptStatus status);
+    
+    @Query("SELECT qa FROM QuizAttempt qa WHERE qa.student.id = :studentId AND qa.enrollment.id = :enrollmentId AND qa.quiz.id IN :quizIds AND qa.status = :status ORDER BY qa.completedAt DESC")
+    List<QuizAttempt> findByStudentIdAndEnrollmentIdAndQuizIdInAndStatusOrderByCompletedAtDesc(@Param("studentId") String studentId, @Param("enrollmentId") String enrollmentId, @Param("quizIds") List<String> quizIds, @Param("status") AttemptStatus status);
 } 
