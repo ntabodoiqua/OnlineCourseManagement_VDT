@@ -2,11 +2,15 @@ package com.ntabodoiqua.online_course_management.service;
 
 import com.ntabodoiqua.online_course_management.dto.request.lesson.LessonFilterRequest;
 import com.ntabodoiqua.online_course_management.dto.request.lesson.LessonRequest;
+import com.ntabodoiqua.online_course_management.dto.response.course.CourseResponse;
 import com.ntabodoiqua.online_course_management.dto.response.lesson.LessonResponse;
+import com.ntabodoiqua.online_course_management.entity.Course;
+import com.ntabodoiqua.online_course_management.entity.CourseLesson;
 import com.ntabodoiqua.online_course_management.entity.Lesson;
 import com.ntabodoiqua.online_course_management.entity.User;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
+import com.ntabodoiqua.online_course_management.mapper.CourseMapper;
 import com.ntabodoiqua.online_course_management.mapper.LessonMapper;
 import com.ntabodoiqua.online_course_management.repository.CourseLessonRepository;
 import com.ntabodoiqua.online_course_management.repository.EnrollmentRepository;
@@ -39,6 +43,7 @@ public class LessonService {
     LessonRepository lessonRepository;
     LessonMapper lessonMapper;
     CourseLessonRepository courseLessonRepository;
+    CourseMapper courseMapper;
 
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public LessonResponse createLesson(LessonRequest request) {
@@ -188,5 +193,18 @@ public class LessonService {
                 .title(lesson.getTitle())
                 .courseCount(0) // Không show courseCount cho limited access
                 .build();
+    }
+
+    @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
+    public List<CourseResponse> getCoursesByLesson(String lessonId) {
+        Lesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+
+        List<CourseLesson> courseLessons = courseLessonRepository.findByLesson(lesson);
+
+        return courseLessons.stream()
+                .map(CourseLesson::getCourse)
+                .map(courseMapper::toCourseResponse)
+                .collect(Collectors.toList());
     }
 }
