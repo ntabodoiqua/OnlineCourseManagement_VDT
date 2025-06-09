@@ -10,6 +10,7 @@ import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
 import com.ntabodoiqua.online_course_management.mapper.CategoryMapper;
 import com.ntabodoiqua.online_course_management.mapper.CourseMapper;
+import com.ntabodoiqua.online_course_management.mapper.EnrollmentMapper;
 import com.ntabodoiqua.online_course_management.mapper.UserMapper;
 import com.ntabodoiqua.online_course_management.repository.*;
 import com.ntabodoiqua.online_course_management.service.file.FileStorageService;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,12 +34,14 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.ntabodoiqua.online_course_management.dto.response.course.PopularCourseResponse;
 import org.springframework.data.domain.PageRequest;
+import com.ntabodoiqua.online_course_management.dto.response.enrollment.EnrollmentResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -64,6 +68,7 @@ public class CourseService {
     EnrollmentRepository enrollmentRepository;
     CourseReviewRepository courseReviewRepository;
     CategoryMapper categoryMapper;
+    EnrollmentMapper enrollmentMapper;
 
     // Forward declaration to avoid circular dependency
     @Lazy
@@ -602,5 +607,18 @@ public class CourseService {
             log.error("Error checking instructor permission for course {}: {}", courseId, e.getMessage());
             return false;
         }
+    }
+
+    public Page<EnrollmentResponse> getMyCourses(Pageable pageable) {
+        // Lấy thông tin người dùng hiện tại
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Lấy danh sách các khóa học đã đăng ký (có phân trang)
+        Page<Enrollment> enrollments = enrollmentRepository.findByStudent(user, pageable);
+
+        // Chuyển đổi Page<Enrollment> sang Page<EnrollmentResponse>
+        return enrollments.map(enrollmentMapper::toEnrollmentResponse);
     }
 }

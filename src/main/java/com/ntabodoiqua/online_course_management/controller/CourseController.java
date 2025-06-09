@@ -8,6 +8,7 @@ import com.ntabodoiqua.online_course_management.dto.request.course.CourseFilterR
 import com.ntabodoiqua.online_course_management.dto.request.course.CourseUpdateRequest;
 import com.ntabodoiqua.online_course_management.dto.request.lesson.LessonFilterRequest;
 import com.ntabodoiqua.online_course_management.dto.response.course.CourseResponse;
+import com.ntabodoiqua.online_course_management.dto.response.enrollment.EnrollmentResponse;
 import com.ntabodoiqua.online_course_management.dto.response.lesson.LessonResponse;
 import com.ntabodoiqua.online_course_management.exception.AppException;
 import com.ntabodoiqua.online_course_management.exception.ErrorCode;
@@ -71,6 +72,15 @@ public class CourseController {
             Pageable pageable) {
         Page<CourseResponse> courses = courseService.getCourses(filter, pageable);
         return ApiResponse.<Page<CourseResponse>>builder()
+                .result(courses)
+                .build();
+    }
+
+    // API lấy danh sách các khóa học của tôi
+    @GetMapping("/my")
+    public ApiResponse<Page<EnrollmentResponse>> getMyCourses(Pageable pageable) {
+        Page<EnrollmentResponse> courses = courseService.getMyCourses(pageable);
+        return ApiResponse.<Page<EnrollmentResponse>>builder()
                 .result(courses)
                 .build();
     }
