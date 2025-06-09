@@ -545,15 +545,22 @@ public class CourseService {
                 .map(result -> {
                     String courseId = (String) result[0];
                     Long enrollmentCount = (Long) result[1];
-                    Course course = courseRepository.findById(courseId)
+                    return courseRepository.findById(courseId)
+                            .map(course -> {
+                                PopularCourseResponse response = new PopularCourseResponse();
+                                CourseResponse courseResponse = courseMapper.toCourseResponse(course);
+
+                                // Enrich with rating data
+                                enrichWithRatingData(courseResponse, course.getId());
+
+                                response.setCourse(courseResponse);
+                                response.setEnrollmentCount(enrollmentCount);
+                                response.setAverageRating(courseResponse.getAverageRating());
+                                response.setTotalReviews(courseResponse.getTotalReviews() != null ? courseResponse.getTotalReviews().longValue() : null);
+
+                                return response;
+                            })
                             .orElse(null);
-                    if (course != null) {
-                        return PopularCourseResponse.builder()
-                                .course(courseMapper.toCourseResponse(course))
-                                .enrollmentCount(enrollmentCount)
-                                .build();
-                    }
-                    return null;
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
