@@ -61,7 +61,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "/instructors/public/**",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
-                        "/swagger-ui.html"
+                        "/swagger-ui.html",
+                        "/course-reviews/approved/**",
+                        "/course-reviews/public/**"
                 );
     }
 }
