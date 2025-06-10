@@ -147,9 +147,16 @@ public class InstructorPublicService {
         // Get instructor's courses
         var coursePage = courseRepository.findByInstructorIdAndIsActiveTrue(instructorId, pageable);
         
-        // Convert to CourseResponse
+        // Convert to CourseResponse and enrich with statistics
         List<CourseResponse> courseResponses = coursePage.getContent().stream()
-                .map(courseMapper::toCourseResponse)
+                .map(course -> {
+                    CourseResponse response = courseMapper.toCourseResponse(course);
+                    Double avgRating = courseReviewRepository.findAverageRatingByCourseId(course.getId());
+                    Integer totalReviews = courseReviewRepository.countByCourseIdAndIsApprovedTrue(course.getId());
+                    response.setAverageRating(avgRating);
+                    response.setTotalReviews(totalReviews);
+                    return response;
+                })
                 .collect(Collectors.toList());
 
         log.info("Found {} courses for instructor: {}", courseResponses.size(), instructor.getUsername());

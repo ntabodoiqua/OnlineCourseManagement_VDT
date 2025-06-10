@@ -50,8 +50,7 @@ public interface CourseReviewRepository extends JpaRepository<CourseReview, Stri
     @Query("SELECT AVG(cr.rating) FROM CourseReview cr WHERE cr.course.id = :courseId AND cr.isApproved = true")
     Double findAverageRatingByCourseId(@Param("courseId") String courseId);
 
-    @Query("SELECT COUNT(cr) FROM CourseReview cr WHERE cr.course.id = :courseId AND cr.isApproved = true")
-    Long countApprovedReviewsByCourseId(@Param("courseId") String courseId);
+    Integer countByCourseIdAndIsApprovedTrue(String courseId);
     
     // Count approved reviews by instructor
     @Query("SELECT COUNT(cr) FROM CourseReview cr WHERE cr.course.instructor.id = :instructorId AND cr.isApproved = true")

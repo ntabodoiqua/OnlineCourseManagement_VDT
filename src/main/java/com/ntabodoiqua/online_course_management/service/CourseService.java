@@ -337,14 +337,14 @@ public class CourseService {
      */
     private void enrichWithRatingData(CourseResponse response, String courseId) {
         try {
-            Double averageRating = courseReviewRepository.findAverageRatingByCourseId(courseId);
-            Long totalReviews = courseReviewRepository.countApprovedReviewsByCourseId(courseId);
+            Double avgRating = courseReviewRepository.findAverageRatingByCourseId(courseId);
+            Integer totalReviews = courseReviewRepository.countByCourseIdAndIsApprovedTrue(courseId);
             
-            response.setAverageRating(averageRating);
-            response.setTotalReviews(totalReviews != null ? totalReviews.intValue() : 0);
+            response.setAverageRating(avgRating);
+            response.setTotalReviews(totalReviews);
             
             log.debug("Enriched course {} with rating data - Average: {}, Total reviews: {}", 
-                     courseId, averageRating, totalReviews);
+                     courseId, avgRating, totalReviews);
         } catch (Exception e) {
             log.warn("Failed to enrich course {} with rating data: {}", courseId, e.getMessage());
             response.setAverageRating(null);

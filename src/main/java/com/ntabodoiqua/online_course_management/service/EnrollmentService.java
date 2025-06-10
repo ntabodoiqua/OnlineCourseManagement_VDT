@@ -119,10 +119,10 @@ public class EnrollmentService {
         try {
             String courseId = courseResponse.getId();
             Double averageRating = courseReviewRepository.findAverageRatingByCourseId(courseId);
-            Long totalReviews = courseReviewRepository.countApprovedReviewsByCourseId(courseId);
+            Integer totalReviews = courseReviewRepository.countByCourseIdAndIsApprovedTrue(courseId);
             
             courseResponse.setAverageRating(averageRating);
-            courseResponse.setTotalReviews(totalReviews != null ? totalReviews.intValue() : 0);
+            courseResponse.setTotalReviews(totalReviews);
             
             log.debug("Enriched course {} with rating data - Average: {}, Total reviews: {}", 
                      courseId, averageRating, totalReviews);
