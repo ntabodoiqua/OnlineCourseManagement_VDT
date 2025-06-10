@@ -234,4 +234,165 @@ Dựa trên yêu cầu ban đầu, dự án không chỉ hoàn thành mà còn p
 
 5.  **Xử lý bất đồng bộ (Asynchronous Processing)**:
     *   **Vấn đề**: Các tác vụ tốn thời gian như gửi email thông báo, xử lý video bài học... nếu được xử lý đồng bộ sẽ làm tăng thời gian phản hồi của API.
-    *   **Giải pháp**: Sử dụng **RabbitMQ** hoặc **Kafka**. Khi có một sự kiện (VD: học viên đăng ký), thay vì xử lý ngay, hệ thống sẽ đẩy một message vào queue. Một service khác (worker) sẽ lắng nghe và xử lý tác vụ đó một cách bất đồng bộ. 
+    *   **Giải pháp**: Sử dụng **RabbitMQ** hoặc **Kafka**. Khi có một sự kiện (VD: học viên đăng ký), thay vì xử lý ngay, hệ thống sẽ đẩy một message vào queue. Một service khác (worker) sẽ lắng nghe và xử lý tác vụ đó một cách bất đồng bộ.
+
+---
+
+### Phân tích Chi tiết các Luồng nghiệp vụ và Thiết kế API
+
+Phần này sẽ đi sâu vào các luồng nghiệp vụ cho từng vai trò người dùng, giải thích lý do đằng sau thiết kế API, đồng thời phân tích điểm mạnh, điểm yếu và đề xuất các cải tiến.
+
+#### 1. Người dùng không xác thực (Guest)
+
+Luồng nghiệp vụ của người dùng không xác thực tập trung vào việc khám phá và tìm hiểu các khóa học có sẵn trên nền tảng.
+
+**a. Luồng: Xem danh sách khóa học và thông tin giảng viên**
+
+*   **Luồng nghiệp vụ**:
+    1.  Người dùng truy cập trang web/ứng dụng.
+    2.  Hệ thống hiển thị danh sách các khóa học công khai, có thể kèm theo các khóa học nổi bật (`popular`) hoặc mới nhất.
+    3.  Người dùng có thể sử dụng bộ lọc (theo danh mục, giá tiền,...) để tìm kiếm khóa học phù hợp.
+    4.  Người dùng có thể xem thông tin chi tiết của một khóa học cụ thể.
+    5.  Người dùng cũng có thể xem danh sách các giảng viên và thông tin công khai của họ.
+
+*   **Thiết kế API và Lý do**:
+    *   `GET /courses/public`: Cung cấp danh sách khóa học đã được phân trang và cho phép lọc. Tên gọi `public` làm rõ đây là API không cần xác thực.
+    *   `GET /courses/public/{courseId}`: Lấy thông tin chi tiết của một khóa học. Sử dụng path variable (`{courseId}`) là một thiết kế RESTful chuẩn để định danh một tài nguyên cụ thể.
+    *   `GET /instructors/public`: Lấy danh sách giảng viên.
+    *   `GET /instructors/public/{instructorId}`: Xem hồ sơ công khai của giảng viên.
+    *   **Lý do chung**: Các API này sử dụng phương thức `GET` vì chúng chỉ dùng để truy xuất dữ liệu, không làm thay đổi trạng thái hệ thống. Việc tách riêng các endpoint `public` giúp quản lý bảo mật dễ dàng hơn ở tầng gateway hoặc Spring Security, cho phép các request này đi qua mà không cần kiểm tra JWT.
+
+*   **Điểm mạnh**:
+    *   API rõ ràng, dễ hiểu và tuân thủ các nguyên tắc REST.
+    *   Cung cấp đầy đủ các bộ lọc cần thiết để người dùng có thể tìm kiếm hiệu quả.
+
+*   **Điểm yếu và Hướng cải tiến**:
+    *   **Điểm yếu**: Hiện tại, API `GET /courses` và `GET /courses/public` có vẻ gọi cùng một logic. Nếu không có sự khác biệt về dữ liệu trả về cho người dùng đã đăng nhập và người dùng công khai, điều này có thể gây nhầm lẫn.
+    *   **Cải tiến**: Nếu có sự khác biệt, cần làm rõ trong logic của service. Ví dụ, `GET /courses` (cho người dùng đã đăng nhập) có thể trả về thêm thông tin về việc người dùng đã đăng ký khóa học này hay chưa. Nếu không, nên xem xét loại bỏ một trong hai để tránh trùng lặp.
+
+#### 2. Học viên (Student)
+
+Sau khi đăng ký và đăng nhập, học viên có các luồng nghiệp vụ liên quan đến việc tham gia và học tập.
+
+**a. Luồng: Ghi danh vào một khóa học**
+
+*   **Luồng nghiệp vụ**:
+    1.  Học viên chọn một khóa học và nhấn nút "Ghi danh".
+    2.  Hệ thống kiểm tra các điều kiện: học viên đã đăng nhập chưa, đã ghi danh vào khóa học này trước đó chưa, khóa học có yêu cầu phê duyệt không.
+    3.  Nếu hợp lệ, hệ thống tạo một bản ghi `Enrollment` mới, liên kết giữa học viên và khóa học.
+    4.  Hệ thống trả về thông báo ghi danh thành công.
+
+*   **Thiết kế API và Lý do**:
+    *   `POST /enrollments`: Đây là một thiết kế RESTful tốt. Thay vì coi việc ghi danh là một hành động trên `Course` (VD: `POST /courses/{id}/enroll`), hệ thống xem `Enrollment` (sự ghi danh) là một tài nguyên riêng biệt. Điều này giúp cho việc quản lý ghi danh (xem, hủy) trở nên rõ ràng hơn.
+
+*   **Điểm mạnh**:
+    *   Thiết kế API tài nguyên hóa (`resource-oriented`) giúp hệ thống dễ mở rộng.
+    *   Logic kiểm tra điều kiện trong service đảm bảo tính toàn vẹn dữ liệu.
+
+*   **Điểm yếu và Hướng cải tiến**:
+    *   **Điểm yếu**: API có thể yêu cầu client phải gửi toàn bộ đối tượng `Enrollment`. Điều này không an toàn và không hiệu quả.
+    *   **Cải tiến**: Nên sử dụng một `EnrollmentRequestDTO` chỉ chứa `courseId`. Thông tin `userId` nên được lấy từ `SecurityContextHolder` trong service để đảm bảo học viên chỉ có thể tự ghi danh cho chính mình.
+
+**b. Luồng: Theo dõi tiến độ và học bài**
+
+*   **Luồng nghiệp vụ**:
+    1.  Học viên vào trang "Khóa học của tôi".
+    2.  Hệ thống hiển thị danh sách các khóa học đã ghi danh.
+    3.  Khi vào một khóa học, hệ thống hiển thị danh sách các bài học và đánh dấu các bài đã hoàn thành.
+    4.  Khi học viên hoàn thành một bài học (VD: xem hết video, làm quiz), họ nhấn "Đánh dấu hoàn thành".
+    5.  Hệ thống cập nhật bản ghi `Progress`, liên kết với `Enrollment` và `Lesson`.
+
+*   **Thiết kế API và Lý do**:
+    *   `GET /courses/my`: Lấy danh sách khóa học của riêng người dùng đang đăng nhập. Tên gọi `my` rất trực quan.
+    *   `POST /progress`: Tạo hoặc cập nhật một bản ghi `Progress`. Client sẽ gửi `lessonId` và `enrollmentId`. Hệ thống sẽ đánh dấu bài học này là hoàn thành.
+
+*   **Điểm mạnh**:
+    *   Việc tách `Progress` ra một tài nguyên riêng giúp theo dõi chi tiết và linh hoạt.
+    *   Luồng logic rõ ràng, dễ dàng cho client tương tác.
+
+*   **Điểm yếu và Hướng cải tiến**:
+    *   **Cải tiến**: Cần có cơ chế xác thực mạnh mẽ trong service của `POST /progress` để đảm bảo một học viên không thể cập nhật tiến độ cho một `enrollment` không thuộc về mình.
+
+#### 3. Giảng viên (Instructor)
+
+Giảng viên chịu trách nhiệm tạo và quản lý nội dung khóa học.
+
+**a. Luồng: Tạo và quản lý khóa học**
+
+*   **Luồng nghiệp vụ**:
+    1.  Giảng viên truy cập vào trang quản lý khóa học.
+    2.  Nhấn "Tạo khóa học mới", điền các thông tin (tên, mô tả, danh mục,...) và tải lên ảnh thumbnail.
+    3.  Hệ thống nhận thông tin, xác thực quyền (`INSTRUCTOR`), kiểm tra tính hợp lệ của dữ liệu (VD: tên khóa học không trùng).
+    4.  Lưu thông tin khóa học và lưu file ảnh vào hệ thống lưu trữ.
+    5.  Tương tự với các hành động cập nhật, xóa khóa học. Hệ thống phải kiểm tra quyền sở hữu: chỉ giảng viên tạo ra khóa học (hoặc Admin) mới có quyền sửa/xóa.
+
+*   **Thiết kế API và Lý do**:
+    *   `POST /courses`, `PUT /courses/{courseId}`, `DELETE /courses/{courseId}`: Sử dụng các phương thức HTTP chuẩn (`POST`, `PUT`, `DELETE`) cho các hoạt động CRUD, đây là một thực hành tốt nhất của REST.
+    *   Sử dụng `@PreAuthorize("hasRole('INSTRUCTOR')")` ở tầng controller là một cách hiệu quả để phân quyền, chặn ngay các truy cập không hợp lệ.
+    *   API nhận `multipart/form-data` cho phép gửi cả dữ liệu JSON và file trong một request, rất tiện lợi.
+
+*   **Điểm mạnh**:
+    *   Phân quyền rõ ràng và bảo mật ở cấp độ API.
+    *   Kiểm tra quyền sở hữu trong service là một lớp bảo mật nghiệp vụ quan trọng, ngăn chặn giảng viên này sửa khóa học của giảng viên khác.
+    *   Xử lý file và dữ liệu trong cùng một giao dịch giúp đảm bảo tính nhất quán.
+
+*   **Điểm yếu và Hướng cải tiến**:
+    *   **Điểm yếu**: Endpoint `PATCH /{courseId}/toggle-status` để bật/tắt khóa học hiện tại không có annotation `@PreAuthorize`. Đây là một lỗ hổng bảo mật tiềm tàng, vì bất kỳ người dùng xác thực nào cũng có thể gọi nó.
+    *   **Cải tiến**: Bổ sung ngay `@PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")` cho endpoint này. Đồng thời, logic trong service cũng cần kiểm tra quyền sở hữu tương tự như khi xóa/sửa khóa học.
+
+#### 4. Quản trị viên (Admin)
+
+Admin có quyền cao nhất, quản lý toàn bộ hệ thống.
+
+**a. Luồng: Quản lý người dùng**
+
+*   **Luồng nghiệp vụ**:
+    1.  Admin vào trang quản lý người dùng.
+    2.  Hệ thống hiển thị danh sách người dùng với bộ lọc và phân trang.
+    3.  Admin có thể thực hiện các hành động: xem chi tiết, cập nhật thông tin, thay đổi mật khẩu, vô hiệu hóa/kích hoạt tài khoản, hoặc xóa người dùng.
+    4.  Hệ thống có logic để ngăn Admin tự xóa hoặc vô hiệu hóa chính tài khoản của mình.
+
+*   **Thiết kế API và Lý do**:
+    *   `GET, PUT, DELETE /admin/manage-users/{userId}`: Toàn bộ các API quản lý người dùng được nhóm dưới một đường dẫn chung `/admin/manage-users`, giúp việc áp dụng quy tắc bảo mật chung cho toàn bộ nhóm chức năng này trở nên đơn giản.
+    *   Việc Admin có thể thay đổi mật khẩu của người dùng khác (`/{userId}/change-password`) là một chức năng cần thiết cho việc hỗ trợ người dùng khi họ quên mật khẩu và không thể tự reset.
+
+*   **Điểm mạnh**:
+    *   Cung cấp bộ công cụ quản lý người dùng toàn diện cho Admin.
+    *   Có các biện pháp bảo vệ quan trọng (không cho phép tự khóa tài khoản).
+    *   Cấu trúc API được tổ chức tốt theo tài nguyên.
+
+*   **Điểm yếu và Hướng cải tiến**:
+    *   **Cải tiến**: Nên có một hệ thống ghi log (Audit Log) chi tiết. Mỗi khi Admin thực hiện một hành động quan trọng (thay đổi mật khẩu, xóa người dùng), hệ thống nên tự động ghi lại hành động đó (ai làm, làm gì, lúc nào) để phục vụ cho việc kiểm tra và truy vết sau này.
+
+**b. Luồng: Quản lý danh mục và bảo trì hệ thống**
+
+*   **Luồng nghiệp vụ**:
+    1.  Admin vào trang quản lý danh mục, có thể thêm, sửa, xóa các danh mục khóa học.
+    2.  Admin có thể cần thực hiện các tác vụ bảo trì, ví dụ như đồng bộ lại số bài học của tất cả các khóa học.
+
+*   **Thiết kế API và Lý do**:
+    *   `POST, PUT, DELETE /categories`: Các API CRUD cho danh mục, được bảo vệ bằng quyền Admin.
+    *   `POST /courses/admin/sync-all-total-lessons`: Đây là một API chuyên dụng cho tác vụ bảo trì. Đặt nó trong `CourseController` nhưng với tiền tố `/admin` và bảo vệ bằng `@PreAuthorize("hasRole('ADMIN')")` là một giải pháp hợp lý, giữ cho logic liên quan đến course nằm trong controller tương ứng.
+
+*   **Điểm mạnh**:
+    *   Tách biệt rõ ràng các chức năng chỉ dành cho Admin.
+    *   API cho các tác vụ bảo trì được thiết kế để không ảnh hưởng đến người dùng thông thường.
+
+*   **Điểm yếu và Hướng cải tiến**:
+    *   **Cải tiến**: Các tác vụ tốn nhiều thời gian như `sync-all-total-lessons` có thể làm block luồng xử lý chính nếu số lượng khóa học lớn. Nên xem xét chuyển chúng thành các tác vụ bất đồng bộ (asynchronous) bằng cách sử dụng `@Async` của Spring hoặc một hàng đợi tin nhắn (Message Queue) như RabbitMQ.
+
+### So sánh với các giải pháp hiện có và Đánh giá
+
+**Điểm mới và khác biệt so với các giải pháp tiêu chuẩn:**
+
+*   **Cơ chế xử lý JWT khi đăng xuất (`InvalidatedToken`)**: Nhiều hệ thống đơn giản chỉ dựa vào thời gian hết hạn của JWT. Việc triển khai một blacklist cho các token đã đăng xuất là một bước tiến về bảo mật, giúp vô hiệu hóa ngay lập-tức các token có thể đã bị lộ.
+*   **API bảo trì chuyên dụng (`sync-total-lessons`)**: Việc cung cấp các API để bảo trì và đồng bộ dữ liệu một cách chủ động cho thấy sự trưởng thành trong thiết kế, giải quyết các vấn đề về tính nhất quán dữ liệu có thể phát sinh trong quá trình hoạt động.
+*   **Kiểm tra quyền sở hữu ở tầng service**: Ngoài việc phân quyền bằng role ở controller, hệ thống còn cẩn thận kiểm tra "chủ sở hữu" của tài nguyên (VD: giảng viên chỉ được sửa khóa học của mình). Đây là một lớp logic nghiệp vụ quan trọng mà không phải hệ thống nào cũng triển khai kỹ lưỡng.
+
+**Những điểm chưa ổn hoặc cần cân nhắc:**
+
+*   **Thiếu Audit Log**: Như đã đề cập, việc thiếu một hệ thống ghi vết các hành động quan trọng của Admin là một thiếu sót lớn về mặt quản trị và an ninh.
+*   **Xử lý tác vụ dài hơi một cách đồng bộ**: Các tác vụ có khả năng chạy lâu (đồng bộ dữ liệu, xử lý file lớn) đang được xử lý đồng bộ, có thể ảnh hưởng đến hiệu năng và trải nghiệm người dùng. Đây là một điểm yếu phổ biến trong nhiều ứng dụng nhưng cần được khắc phục khi hệ thống phát triển lớn hơn.
+*   **Thiết kế DTO**: Ở một số nơi, có thể API vẫn còn chấp nhận các đối tượng Entity trực tiếp thay vì các DTO chuyên dụng (Request DTOs), điều này có thể dẫn đến các vấn đề về bảo mật (mass assignment vulnerability) và làm lộ cấu trúc bên trong của CSDL. Cần rà soát và đảm bảo tất cả các endpoint đều sử dụng DTO cho input.
+
+Nhìn chung, giải pháp hiện tại đã rất mạnh mẽ, an toàn và có cấu trúc tốt. Các điểm yếu chủ yếu là những vấn đề liên quan đến việc tối ưu hóa hiệu năng và hoàn thiện các tính năng ở quy mô lớn, vốn có thể được cải tiến trong các phiên bản tiếp theo. 
