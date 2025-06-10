@@ -76,6 +76,16 @@ public class CourseController {
                 .build();
     }
 
+    @GetMapping("/public")
+    public ApiResponse<Page<CourseResponse>> getAllPublicCourses(
+            @ModelAttribute CourseFilterRequest filter,
+            Pageable pageable) {
+        Page<CourseResponse> courses = courseService.getCourses(filter, pageable);
+        return ApiResponse.<Page<CourseResponse>>builder()
+                .result(courses)
+                .build();
+    }
+
     // API lấy danh sách các khóa học của tôi
     @GetMapping("/my")
     public ApiResponse<Page<EnrollmentResponse>> getMyCourses(Pageable pageable) {
@@ -88,6 +98,11 @@ public class CourseController {
     // API lấy thông tin chi tiết của một khóa học theo ID
     @GetMapping("/{courseId}")
     public ApiResponse<CourseResponse> getCourseById(@PathVariable String courseId) {
+        return ApiResponse.<CourseResponse>builder().result(courseService.getCourseById(courseId)).build();
+    }
+
+    @GetMapping("/public/{courseId}")
+    public ApiResponse<CourseResponse> getPublicCourseById(@PathVariable String courseId) {
         return ApiResponse.<CourseResponse>builder().result(courseService.getCourseById(courseId)).build();
     }
 

@@ -25,9 +25,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final String[] PUBLIC_POST_ENDPOINTS = {"/users",
-            "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh", "/category/get-categories",
+            "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh",
     };
-    private final String[] PUBLIC_GET_ENDPOINTS = {"/category", "/public/**", "/uploads/public/**", "/courses/**", "/lessons", "/courses", "/course-reviews/approved/**", "/instructors/public/**","course-reviews/public/**",
+    private final String[] PUBLIC_GET_ENDPOINTS = {
+            "/uploads/public/**",
+            "/courses/public/**",
+            "/lessons/public/**",
+            "/course-reviews/public/**",
+            "/instructors/public/**",
+            "/category/public/**",
     };
 
     @Autowired

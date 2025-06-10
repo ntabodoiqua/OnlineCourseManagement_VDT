@@ -21,10 +21,11 @@ public class UserStatusInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Skip checks if user is not authenticated or is an admin
+        // Skip checks if user is not authenticated, is an admin, or is anonymous
         if (authentication == null || !authentication.isAuthenticated() ||
                 authentication.getAuthorities().stream()
-                        .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"))) {
+                        .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN")
+                                            || authority.getAuthority().equals("ROLE_ANONYMOUS"))) {
             return true;
         }
 
