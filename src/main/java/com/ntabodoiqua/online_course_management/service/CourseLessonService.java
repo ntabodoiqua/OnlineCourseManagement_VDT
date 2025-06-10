@@ -46,7 +46,7 @@ public class CourseLessonService {
     EnrollmentRepository enrollmentRepository;
     ProgressService progressService;
 
-    /*** Helper method: kiểm tra quyền instructor/admin trên course ***/
+    /*** Helper method: kiểm tra quyền instructor/admin hoặc học sinh đã đăng ký courses trên course ***/
     private void checkCoursePermission(Course course) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
@@ -54,7 +54,10 @@ public class CourseLessonService {
         boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN"));
         boolean isInstructor = user.getRoles().stream().anyMatch(r -> r.getName().equals("INSTRUCTOR"));
         boolean isOwner = course.getInstructor() != null && course.getInstructor().getUsername().equals(username);
-        if (!isAdmin && !(isInstructor && isOwner)) {
+        // Kiểm tra xem người dùng có phải là học sinh đã đăng ký khóa học không
+        boolean isEnrolled = enrollmentRepository.existsByStudentIdAndCourseId(user.getId(), course.getId());
+
+        if (!isAdmin && !(isInstructor && isOwner) && !isEnrolled) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
     }
