@@ -149,7 +149,7 @@ public class InstructorPublicService {
         
         // Convert to CourseResponse
         List<CourseResponse> courseResponses = coursePage.getContent().stream()
-                .map(course -> courseMapper.toCourseResponse(course))
+                .map(courseMapper::toCourseResponse)
                 .collect(Collectors.toList());
 
         log.info("Found {} courses for instructor: {}", courseResponses.size(), instructor.getUsername());
@@ -222,7 +222,7 @@ public class InstructorPublicService {
             
             // Get student statistics
             Long totalStudents = enrollmentRepository.countDistinctStudentsByInstructorId(instructorId);
-            response.setTotalStudents(totalStudents != null ? totalStudents : 0L);
+            response.setTotalStudents(totalStudents);
             
             // Get rating and review statistics
             Double averageRating = courseReviewRepository.findAverageRatingByInstructorId(instructorId);

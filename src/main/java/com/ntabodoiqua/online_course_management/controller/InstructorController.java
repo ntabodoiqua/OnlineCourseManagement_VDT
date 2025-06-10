@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,12 +35,11 @@ public class InstructorController {
     InstructorPublicService instructorPublicService;
 
     /**
-     * Get top-rated instructors (public for students and admin)
+     * Get top-rated instructors (public for everyone)
      * @param limit Number of top instructors to return (1-50)
      * @return Top instructors ordered by rating
      */
     @GetMapping("/public/top")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<List<InstructorResponse>> getTopInstructors(
             @RequestParam(defaultValue = "10") 
@@ -60,13 +58,12 @@ public class InstructorController {
     }
 
     /**
-     * Get all instructors with filtering and pagination (public for students and admin)
+     * Get all instructors with filtering and pagination (public for everyone)
      * @param filter Filter criteria with validation
      * @param pageable Pagination parameters
      * @return Paginated list of instructors
      */
     @GetMapping("/public")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<Page<InstructorResponse>> getAllInstructors(
             @Valid @ModelAttribute InstructorFilterRequest filter,
@@ -83,12 +80,11 @@ public class InstructorController {
     }
 
     /**
-     * Get instructor by ID with detailed information (public for students and admin)
+     * Get instructor by ID with detailed information (public for everyone)
      * @param instructorId Instructor ID
      * @return Detailed instructor information
      */
     @GetMapping("/public/{instructorId}")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<InstructorResponse> getInstructorById(
             @PathVariable String instructorId) {
@@ -104,13 +100,12 @@ public class InstructorController {
     }
 
     /**
-     * Get instructor courses (public for students and admin)
+     * Get instructor courses (public for everyone)
      * @param instructorId Instructor ID
      * @param pageable Pagination parameters
      * @return Paginated list of instructor's courses
      */
     @GetMapping("/public/{instructorId}/courses")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<Page<CourseResponse>> getInstructorCourses(
             @PathVariable String instructorId,

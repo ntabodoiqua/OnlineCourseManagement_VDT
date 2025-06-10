@@ -27,7 +27,7 @@ public class SecurityConfig {
     private final String[] PUBLIC_POST_ENDPOINTS = {"/users",
             "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh", "/category/get-categories",
     };
-    private final String[] PUBLIC_GET_ENDPOINTS = {"/category", "/public/**", "/uploads/public/**", "/courses/**", "/lessons", "/courses", "/course-reviews/approved/**"
+    private final String[] PUBLIC_GET_ENDPOINTS = {"/category", "/public/**", "/uploads/public/**", "/courses/**", "/lessons", "/courses", "/course-reviews/approved/**", "/instructors/public/**"
     };
 
     @Autowired
