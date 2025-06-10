@@ -149,7 +149,7 @@ public class QuizAttemptController {
      * Bắt đầu preview quiz cho instructor/admin
      * Không lưu vào database, chỉ để test quiz
      */
-    @PostMapping("/quiz/{quizId}/preview/start")
+    @PostMapping("/preview/start/{quizId}")
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
     public ApiResponse<QuizAttemptResponse> startQuizPreview(@PathVariable String quizId) {
         log.info("Starting quiz preview for quiz: {}", quizId);

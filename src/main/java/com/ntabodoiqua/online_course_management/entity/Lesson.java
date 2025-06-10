@@ -25,6 +25,7 @@ public class Lesson {
     String description;
 
     @Lob
+    @Column(columnDefinition = "LONGTEXT")
     String content;
 
     LocalDateTime createdAt;
