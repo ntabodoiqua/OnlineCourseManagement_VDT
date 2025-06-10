@@ -362,4 +362,10 @@ public class FileStorageService {
                 .usageDetails(usageDetails)
                 .build();
     }
+
+    // Lấy tất cả file từ người dùng trong hệ thống cho admin
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<UploadedFile> getAllUploadedFiles(String contentType, String fileName, String uploaderName, Pageable pageable) {
+        return uploadedFileRepository.findAll(UploadedFileSpecification.getFilesByAdminCriteria(contentType, fileName, uploaderName), pageable);
+    }
 }

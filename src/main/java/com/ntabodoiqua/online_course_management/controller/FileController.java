@@ -128,4 +128,20 @@ public class FileController {
                 .result(usage)
                 .build();
     }
+
+    // API lấy tất cả file đã upload của người dùng
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Page<UploadedFile>> getAllUploadedFiles(
+            @RequestParam(required = false) String contentType,
+            @RequestParam(required = false) String fileName,
+            @RequestParam(required = false) String uploaderName,
+            Pageable pageable) {
+        Page<UploadedFile> files = fileStorageService.getAllUploadedFiles(contentType, fileName, uploaderName, pageable);
+        return ApiResponse.<Page<UploadedFile>>builder()
+                .message("All uploaded files fetched successfully")
+                .result(files)
+                .build();
+    }
+
 }
