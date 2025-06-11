@@ -34,6 +34,7 @@ public class SecurityConfig {
             "/course-reviews/public/**",
             "/instructors/public/**",
             "/category/public/**",
+            "**/public/**"
     };
 
     @Autowired

@@ -63,7 +63,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
                         "/course-reviews/approved/**",
-                        "/course-reviews/public/**"
+                        "/course-reviews/public/**",
+                        "**/public/**"
                 );
     }
 }

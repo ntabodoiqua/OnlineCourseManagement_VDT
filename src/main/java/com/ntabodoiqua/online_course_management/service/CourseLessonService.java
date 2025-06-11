@@ -277,6 +277,7 @@ public class CourseLessonService {
         List<CourseLesson> allCourseLessons = courseLessonRepository.findByCourseAndIsVisibleTrueOrderByOrderIndexAsc(course);
 
         // Kiểm tra enrollment của user hiện tại
+
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         final boolean isEnrolled;
         
