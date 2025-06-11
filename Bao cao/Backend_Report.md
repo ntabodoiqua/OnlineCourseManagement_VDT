@@ -1,401 +1,2016 @@
 # Báo cáo chi tiết về Backend - Hệ thống Quản lý Khóa học Trực tuyến
 
-### Giới thiệu bài toán
+### 1. Giới thiệu bài toán
 
 **Phát biểu bài toán và động lực thực hiện dự án**
 
-Dự án tập trung vào việc xây dựng một hệ thống backend mạnh mẽ và linh hoạt cho một nền tảng quản lý khóa học trực tuyến. Động lực chính xuất phát từ nhu cầu ngày càng tăng về giáo dục trực tuyến, đòi hỏi một hệ thống có khả năng quản lý hiệu quả các khóa học, người dùng và nội dung học tập.
+Dự án tập trung vào việc xây dựng một hệ thống backend mạnh mẽ và linh hoạt cho một nền tảng quản lý khóa học trực tuyến (Online Course Management System). Động lực chính xuất phát từ nhu cầu ngày càng tăng về giáo dục trực tuyến, đòi hỏi một hệ thống có khả năng quản lý hiệu quả các khóa học, người dùng, nội dung học tập và tương tác giữa người dạy và người học.
 
 **Nhu cầu/mục tiêu cần phải đáp ứng**
 
-Hệ thống cần đáp ứng các nhu cầu sau:
+Hệ thống cần đáp ứng các nhu cầu chính sau đây, tương ứng với các vai trò người dùng khác nhau:
 
-*   **Người dùng:** Đăng ký, đăng nhập, quản lý thông tin cá nhân, tìm kiếm và tham gia khóa học, theo dõi tiến độ học tập, đánh giá khóa học.
-*   **Giảng viên (Instructor):** Tạo và quản lý khóa học (thêm, sửa, xóa), tải lên tài liệu, quản lý học viên trong khóa học của mình.
-*   **Quản trị viên (Admin):** Quản lý toàn bộ hệ thống, bao gồm người dùng, khóa học, danh mục, và xem các thống kê tổng quan.
+*   **Học viên (Student):** Đăng ký, đăng nhập, quản lý thông tin cá nhân. Tìm kiếm, duyệt và đăng ký tham gia các khóa học. Học các bài học, theo dõi tiến độ học tập của bản thân. Đánh giá và để lại nhận xét cho các khóa học đã tham gia.
+*   **Giảng viên (Instructor):** Tạo và quản lý toàn diện các khóa học của mình (thêm, sửa, xóa nội dung, thông tin khóa học). Tải lên và quản lý tài liệu cho các bài học. Theo dõi danh sách học viên trong khóa học. Tạo và quản lý các bài kiểm tra (quiz).
+*   **Quản trị viên (Admin):** Quản lý toàn bộ hệ thống, bao gồm quản lý tài khoản người dùng (khóa, mở khóa), quản lý tất cả các khóa học và danh mục. Xem các thống kê tổng quan về hoạt động của hệ thống.
 
-### Phân tích yêu cầu bài toán và các nghiên cứu liên quan
+### 2. Phân tích yêu cầu bài toán và các nghiên cứu liên quan
 
-**Phân tích yêu cầu bài toán**
+#### Phân tích yêu cầu bài toán
 
-Dựa trên mã nguồn, hệ thống được thiết kế để giải quyết các yêu cầu chính sau:
+Từ mô tả tổng quan, chúng ta có thể phân rã các yêu cầu thành hai nhóm chính:
 
-1.  **Authentication & Authorization:**
-    *   Sử dụng JWT (JSON Web Token) để xác thực người dùng. Có cơ chế xử lý token hết hạn và đăng xuất (`InvalidatedToken`).
-    *   Phân quyền rõ ràng giữa 3 vai trò: `STUDENT`, `INSTRUCTOR`, `ADMIN` bằng Spring Security với `@PreAuthorize`.
+*   **Yêu cầu chức năng (Functional Requirements):**
+    *   **Authentication & Authorization:** Cung cấp cơ chế đăng ký, đăng nhập an toàn (sử dụng JWT). Phải có khả năng phân quyền chi tiết cho 3 vai trò: Student, Instructor, và Admin.
+    *   **Quản lý Khóa học:** Instructor phải có đầy đủ các quyền tạo, đọc, cập nhật, xóa (CRUD) trên các khóa học và nội dung liên quan (bài học, tài liệu). Hệ thống phải lưu trữ được các thông tin đa dạng của khóa học.
+    *   **Tương tác của Học viên:** Student có thể tìm kiếm, đăng ký khóa học, theo dõi tiến độ hoàn thành, và đưa ra đánh giá (rating) cũng như nhận xét.
+    *   **Quản trị hệ thống:** Admin có quyền cao nhất, có khả năng xem các số liệu thống kê tổng quan và quản lý toàn bộ người dùng, khóa học trên hệ thống.
 
-2.  **Quản lý Khóa học (Course Management):**
-    *   Giảng viên có thể tạo, cập nhật, xóa khóa học.
-    *   Mỗi khóa học có đầy đủ thông tin: tên, mô tả, mô tả chi tiết, ảnh đại diện, trạng thái, ngày bắt đầu/kết thúc, giảng viên, danh mục.
-    *   Khóa học được liên kết với các bài học (`Lesson`), tài liệu (`CourseDocument`).
+*   **Yêu cầu phi chức năng (Non-functional Requirements):**
+    *   **Công nghệ:** Hệ thống phải được xây dựng bằng Spring Boot, sử dụng JPA/Hibernate cho tầng truy cập dữ liệu và kết nối với CSDL quan hệ (MySQL).
+    *   **API:** Cung cấp giao diện RESTful API. Tích hợp Swagger UI để việc kiểm thử và tài liệu hóa API trở nên dễ dàng.
+    *   **Kiến trúc:** Khuyến khích áp dụng các mẫu kiến trúc tốt như Clean Architecture hoặc Hexagonal Architecture để tăng tính dễ bảo trì và mở rộng.
 
-3.  **Tham gia khóa học:**
-    *   Học viên có thể duyệt và đăng ký khóa học.
-    *   Hệ thống theo dõi tiến độ học tập thông qua thực thể `Enrollment` và `Progress`.
+#### Làm rõ các kết quả tìm hiểu từ các giải pháp/nghiên cứu khác liên quan đến bài toán
 
-4.  **Đánh giá và nhận xét:**
-    *   Học viên có thể để lại đánh giá (sao) và nhận xét cho khóa học thông qua thực thể `CourseReview`.
+Hệ thống được xây dựng thuộc loại Hệ thống Quản lý Học tập (Learning Management System - LMS), một lĩnh vực đã có nhiều giải pháp phổ biến và thành công như Moodle, Coursera, Udemy. Việc nghiên cứu các hệ thống này cho thấy một số mẫu thiết kế và công nghệ chung đã được chứng minh là hiệu quả:
 
-5.  **Quản trị viên:**
-    *   Có các API để quản lý người dùng và khóa học.
-    *   Có API thống kê (`StatisticController`) để lấy dữ liệu tổng quan.
+*   **Kiến trúc Backend:** Hầu hết các hệ thống hiện đại đều sử dụng kiến trúc phân lớp (Layered Architecture) hoặc các biến thể tiên tiến hơn như Clean/Hexagonal Architecture. Điều này giúp tách biệt logic nghiệp vụ khỏi các thành phần cơ sở hạ tầng (như database, web framework), làm cho hệ thống dễ dàng thay đổi và kiểm thử.
+*   **Giao tiếp API:** RESTful API là tiêu chuẩn vàng để giao tiếp giữa backend và các client (web, mobile), mang lại sự linh hoạt và độc lập trong phát triển.
+*   **Cơ sở dữ liệu:** CSDL quan hệ (như PostgreSQL, MySQL) thường là lựa chọn ưu tiên cho các LMS do khả năng quản lý hiệu quả các mối quan hệ phức tạp và lồng nhau giữa người dùng, khóa học, bài học, tiến độ, và các thực thể khác.
+*   **Cơ chế xác thực:** JSON Web Token (JWT) là lựa chọn phổ biến cho các RESTful API vì tính stateless, giúp hệ thống dễ dàng mở rộng theo chiều ngang (horizontal scaling).
 
-**Làm rõ các kết quả tìm hiểu từ các giải pháp/nghiên cứu khác liên quan đến bài toán**
+#### Các điểm đạt được/chưa đạt được của các giải pháp/nghiên cứu đã tìm hiểu
 
-Hệ thống áp dụng các mẫu thiết kế và công nghệ phổ biến trong ngành, tương tự như các nền tảng LMS (Learning Management System) khác như Moodle, Coursera, Udemy.
+*   **Điểm đạt được:** Dự án đã học hỏi và áp dụng thành công các công nghệ và kiến trúc đã được kiểm chứng từ các giải pháp lớn. Cụ thể, hệ thống đã xây dựng được một nền tảng vững chắc với kiến trúc phân lớp rõ ràng, cung cấp RESTful API và sử dụng JWT để bảo mật, đáp ứng đầy đủ các yêu cầu cốt lõi của một LMS được đặt ra trong bài toán.
+*   **Điểm chưa đạt được (Phạm vi dự án):** Các giải pháp LMS thương mại quy mô lớn thường có các chức năng phức tạp hơn mà dự án này chưa đề cập tới do giới hạn về phạm vi. Ví dụ:
+    *   **Tích hợp thanh toán:** Kết nối với các cổng thanh toán (Stripe, PayPal) để bán khóa học.
+    *   **Tuân thủ chuẩn E-learning:** Hỗ trợ các chuẩn như SCORM, xAPI để có thể nhập/xuất nội dung học liệu.
+    *   **Xử lý Video nâng cao:** Hệ thống streaming, chuyển mã (transcoding) video để tối ưu cho nhiều thiết bị.
+    *   **Phân tích học tập (Learning Analytics):** Các công cụ phân tích sâu về hành vi và kết quả học tập của học viên.
+    Những điểm này có thể được xem là hướng phát triển và mở rộng tiềm năng cho dự án trong tương lai.
 
-*   **Kiến trúc:** Sử dụng kiến trúc phân lớp (Layered Architecture) rõ ràng với các tầng `Controller`, `Service`, `Repository`. Đây là một kiến trúc phổ biến, dễ phát triển và bảo trì.
-*   **Cơ sở dữ liệu:** Dựa vào các thực thể JPA, hệ thống có thể hoạt động với các CSDL quan hệ như PostgreSQL hoặc MySQL.
-*   **API:** Xây dựng RESTful API, một tiêu chuẩn cho các hệ thống hiện đại, giúp dễ dàng tích hợp với các client (web, mobile).
+### 3. Giải pháp đề xuất
 
-**Các điểm đạt được/chưa đạt được của các giải pháp/nghiên cứu đã tìm hiểu**
+#### Tổng quan giải pháp đề xuất và các điểm cải tiến
 
-*   **Điểm đạt được:**
-    *   Hệ thống đã triển khai đầy đủ các chức năng cốt lõi của một hệ thống quản lý khóa học.
-    *   Cấu trúc code được tổ chức tốt, dễ hiểu.
-    *   Sử dụng các công nghệ hiện đại và phổ biến (Spring Boot, JPA, JWT).
-    *   Có xử lý phân quyền chi tiết, đảm bảo an toàn cho hệ thống.
+Để đáp ứng các yêu cầu trên, giải pháp được đề xuất là xây dựng hệ thống bằng **Spring Boot**, kết hợp với hệ sinh thái phong phú của Spring để có một nền tảng mạnh mẽ, bảo mật và có khả năng mở rộng.
 
-*   **Điểm có thể cải thiện:**
-    *   Mặc dù cấu trúc tốt, dự án chưa hoàn toàn tuân thủ theo `Clean Architecture` hay `Hexagonal Architecture` như đề bài gợi ý. Việc này có thể được cải thiện bằng cách tách biệt rõ ràng hơn nữa giữa business logic và application logic, ví dụ như sử dụng các `use case` riêng biệt.
-    *   Thiếu các bài kiểm thử (unit test, integration test), điều này quan trọng để đảm bảo chất lượng và sự ổn định của hệ thống khi có thay đổi.
+*   **Nền tảng chính:** Spring Boot được chọn làm frameworkหลัก do khả năng phát triển nhanh, cấu hình tự động thông minh và được cộng đồng hỗ trợ rộng rãi.
+*   **Điểm nổi bật và cải tiến trong cách triển khai:** Thay vì chỉ triển khai các tính năng một cách cơ bản, dự án này tập trung vào chất lượng và sự hoàn thiện của mã nguồn, thể hiện qua các điểm sau:
+    *   **Kiến trúc rõ ràng:** Tuân thủ nghiêm ngặt cấu trúc phân lớp, tách biệt rõ ràng các trách nhiệm của `Controller`, `Service`, và `Repository`.
+    *   **Tối ưu hóa việc truyền dữ liệu:** Sử dụng mẫu thiết kế **Data Transfer Object (DTO)** kết hợp với thư viện **MapStruct** để tự động hóa việc ánh xạ. Giải pháp này vừa đảm bảo an toàn (không lộ cấu trúc Entity ra API), vừa linh hoạt (tùy chỉnh được dữ liệu trả về cho từng API), vừa giảm thiểu đáng kể mã lặp đi lặp lại.
+    *   **API linh hoạt và mạnh mẽ:** Triển khai cơ chế tìm kiếm và lọc động bằng **JPA Specification**. Điều này cho phép client có thể kết hợp nhiều tiêu chí lọc khác nhau trên API mà không cần phải định nghĩa trước các phương thức truy vấn cố định ở backend.
+    *   **Bảo mật toàn diện:** Hệ thống không chỉ xác thực bằng JWT mà còn triển khai cơ chế xử lý logout cho token (vốn stateless) thông qua bảng `invalidated_token`, và có nền tảng để chống vét cạn mật khẩu (`loginFailCount`).
+    *   **Xử lý lỗi chuyên nghiệp:** Xây dựng một trình xử lý lỗi toàn cục (`GlobalExceptionHandler` với `@RestControllerAdvice`) để đảm bảo tất cả các lỗi phát sinh trong ứng dụng đều được xử lý một cách nhất quán và trả về định dạng JSON thân thiện cho client.
 
-### Giải pháp đề xuất
+#### Chi tiết các giải pháp kỹ thuật và công nghệ áp dụng
 
-**Tổng quan giải pháp đề xuất và các điểm cải tiến hơn so với các giải pháp/nghiên cứu đang có**
+Dưới đây là chi tiết cách các công nghệ và giải pháp được áp dụng để giải quyết từng yêu cầu nghiệp vụ:
 
-Giải pháp được xây dựng dựa trên Spring Boot, một framework mạnh mẽ và phổ biến để tạo các ứng dụng Java.
+**1. Kiến trúc tổng thể**
 
-*   **Kiến trúc phân lớp:**
-    *   `Controller`: Tiếp nhận request từ client, gọi đến `Service` tương ứng.
-    *   `Service`: Chứa toàn bộ logic nghiệp vụ của ứng dụng.
-    *   `Repository`: Tương tác với cơ sở dữ liệu thông qua Spring Data JPA.
-    *   `Entity`: Định nghĩa các đối tượng được ánh xạ xuống CSDL.
-    *   `DTO` và `Mapper`: Dùng để truyền dữ liệu giữa các lớp một cách an toàn và tránh lộ cấu trúc của `Entity`.
+*   **Công nghệ:** Spring Boot, Spring Data JPA, Hibernate.
+*   **Giải pháp:** Hệ thống được xây dựng dựa trên **kiến trúc phân lớp (Layered Architecture)**.
+    *   **`controller`:** Tầng giao tiếp với bên ngoài, chịu trách nhiệm tiếp nhận các HTTP request, xác thực đầu vào cơ bản (`@Valid`) và gọi các `service` tương ứng để xử lý.
+    *   **`service`:** Tầng chứa logic nghiệp vụ chính của ứng dụng. Đây là nơi xử lý tất cả các quy tắc và quy trình của bài toán, điều phối hoạt động giữa các `repository`. Các phương thức trong tầng này được đánh dấu `@Transactional` để đảm bảo tính toàn vẹn dữ liệu.
+    *   **`repository`:** Tầng truy cập dữ liệu, sử dụng Spring Data JPA để tương tác với cơ sở dữ liệu.
+    *   **`entity`:** Các lớp Java được ánh xạ tới các bảng trong cơ sở dữ liệu bằng JPA.
+    *   **`dto` & `mapper`:** Sử dụng DTO và MapStruct để chuyển đổi dữ liệu an toàn giữa các tầng.
 
-*   **Điểm cải tiến:**
-    *   **Bảo mật:** Sử dụng Spring Security với JWT và phân quyền chi tiết dựa trên vai trò. Có cơ chế chống vét cạn mật khẩu (`loginFailCount`).
-    *   **Linh hoạt:** Việc sử dụng `Specification` cho phép lọc dữ liệu một cách linh hoạt và hiệu quả.
-    *   **API nhất quán:** Sử dụng lớp `ApiResponse` để trả về một định dạng JSON đồng nhất cho tất cả các API.
-    *   **Xử lý file:** Có module riêng (`FileStorageService`) để xử lý việc tải lên và lưu trữ file, giúp tách biệt logic và dễ dàng thay đổi cơ chế lưu trữ sau này.
+**2. Authentication & Authorization (Xác thực & Phân quyền)**
 
-**Chi tiết các giải pháp từ nghiệp vụ đến kỹ thuật, công nghệ áp dụng**
+*   **Công nghệ:** Spring Security, JSON Web Token (JWT).
+*   **Giải pháp:**
+    *   **Luồng xác thực:** Khi người dùng đăng nhập, `AuthenticationService` sẽ xác thực thông tin. Nếu thành công, một JWT chứa thông tin người dùng và quyền hạn sẽ được tạo, ký bằng private key và trả về.
+    *   **Luồng phân quyền:** Với mỗi request, một `JwtAuthenticationFilter` tùy chỉnh sẽ trích xuất và giải mã JWT từ header `Authorization` bằng public key. Thông tin người dùng sau đó được nạp vào `SecurityContext` của Spring. Tầng controller sử dụng các annotation `@PreAuthorize` để kiểm tra quyền truy cập dựa trên thông tin này.
+    *   **Đăng xuất:** Khi người dùng đăng xuất, ID của JWT sẽ được lưu vào bảng `invalidated_token`. Filter sẽ từ chối các token có trong bảng này, đây là một cách hiệu quả để vô hiệu hóa JWT.
 
-1.  **Công nghệ sử dụng:**
-    *   **Framework:** Spring Boot 3
-    *   **ORM:** Spring Data JPA / Hibernate
-    *   **Bảo mật:** Spring Security, JSON Web Token (JWT)
-    *   **API Documentation:** Swagger/OpenAPI (thông qua `springdoc-openapi`) đã được tích hợp. Giao diện Swagger UI có sẵn để khám phá, tài liệu hóa và kiểm thử API một cách trực quan.
-    *   **Database:** MySQL (dựa trên `pom.xml`)
+**3. Quản lý File và Tìm kiếm động**
 
-2.  **Luồng hoạt động chính:**
-    *   **Đăng ký/Đăng nhập:** `AuthenticationController` -> `AuthenticationService` -> `UserRepository` -> JWT được tạo và trả về.
-    *   **Tạo khóa học (Instructor):** Client gửi request (có JWT của Instructor) đến `CourseController` -> `CourseService` kiểm tra quyền, xử lý logic, lưu thông tin vào `CourseRepository`.
-    *   **Xem danh sách khóa học (Student):** Client gửi request đến `CourseController` -> `CourseService` lấy dữ liệu từ `CourseRepository` (chỉ các khóa học `active`) -> `CourseMapper` chuyển đổi `Entity` thành `DTO` -> trả về cho client.
+*   **Công nghệ:** Spring Boot, JPA Specification.
+*   **Giải pháp:**
+    *   **Quản lý File:** `FileStorageService` xử lý việc lưu file tải lên vào thư mục cục bộ, đổi tên file bằng UUID để tránh trùng lặp, và lưu metadata vào CSDL.
+    *   **Tìm kiếm và Lọc động:** `UserSpecification` và `CourseSpecification` được sử dụng để xây dựng các truy vấn `WHERE` động dựa trên các tham số từ URL của request. Giải pháp này giúp các API `GET All` trở nên cực kỳ linh hoạt.
 
-### Kết quả thực hiện
+**4. Phân tích Chi tiết Nghiệp vụ & Usecase
+
+Phần này sẽ đi sâu vào các luồng nghiệp vụ chính của hệ thống, đặc biệt là các nghiệp vụ xoay quanh `Course`.
+
+#### 4.0. Sơ đồ Usecase Tổng quát
+
+Sơ đồ dưới đây mô tả một cách tổng quan các chức năng chính của hệ thống và sự tương tác của ba vai trò cốt lõi: Student, Instructor và Admin.
+
+```plantuml
+@startuml
+left to right direction
+
+title Sơ đồ Usecase Tổng quát của Hệ thống
+
+' --- Actors ---
+actor "Student" as Student
+actor "Instructor" as Instructor
+actor "Admin" as Admin
+
+' --- System Boundary ---
+rectangle "Hệ thống Quản lý Khóa học" {
+
+  ' --- Use Case Packages for Organization ---
+  package "Chức năng chung" {
+    usecase "Xác thực & Quản lý tài khoản" as UC_AUTH
+    usecase "Duyệt và tìm kiếm khóa học" as UC_BROWSE
+  }
+
+  package "Nghiệp vụ Học tập" {
+    usecase "Ghi danh & Học bài" as UC_LEARN
+    usecase "Làm bài kiểm tra & nộp bài" as UC_QUIZ
+    usecase "Theo dõi tiến độ học tập" as UC_PROGRESS
+    usecase "Đánh giá khóa học" as UC_REVIEW
+  }
+
+  package "Nghiệp vụ Giảng dạy" {
+    usecase "Quản lý khóa học (của mình)" as UC_MNG_COURSE
+    usecase "Quản lý nội dung\n(Bài học, Quiz, Tài liệu)" as UC_MNG_CONTENT
+    usecase "Quản lý ghi danh & đánh giá" as UC_MNG_INTERACTION
+    usecase "Xem thống kê giảng viên" as UC_INSTR_STATS
+  }
+  
+  package "Nghiệp vụ Quản trị" {
+    usecase "Quản lý người dùng" as UC_MNG_USERS
+    usecase "Quản lý toàn bộ khóa học" as UC_MNG_ALL_COURSES
+    usecase "Quản lý danh mục" as UC_MNG_CATEGORIES
+    usecase "Xem thống kê hệ thống" as UC_ADMIN_STATS
+  }
+}
+
+' --- Relationships ---
+
+' Common use cases for all authenticated users
+Student -- UC_AUTH
+Instructor -- UC_AUTH
+Admin -- UC_AUTH
+Student -- UC_BROWSE
+Instructor -- UC_BROWSE
+Admin -- UC_BROWSE
+
+' Student use cases
+Student -- UC_LEARN
+Student -- UC_QUIZ
+Student -- UC_PROGRESS
+Student -- UC_REVIEW
+
+' Instructor use cases
+Instructor -- UC_MNG_COURSE
+Instructor -- UC_MNG_CONTENT
+Instructor -- UC_MNG_INTERACTION
+Instructor -- UC_INSTR_STATS
+
+' Admin use cases
+Admin -- UC_MNG_USERS
+Admin -- UC_MNG_ALL_COURSES
+Admin -- UC_MNG_CATEGORIES
+Admin -- UC_ADMIN_STATS
+
+' Admin can also do Instructor's tasks
+Admin -- UC_MNG_INTERACTION
+Admin -- UC_MNG_CONTENT
+Admin -- UC_MNG_ALL_COURSES
+
+@enduml
+```
+
+Phần này sẽ đi sâu vào các luồng nghiệp vụ chính của hệ thống, đặc biệt là các nghiệp vụ xoay quanh `Course`.
+
+#### 4.1. Tổng quan các Nghiệp vụ liên quan đến Khóa học
+
+Dựa trên phân tích các service, hệ thống xử lý 4 nhóm nghiệp vụ chính liên quan đến một khóa học:
+
+*   **Quản lý Khóa học (CourseService):** Xử lý vòng đời của một khóa học, từ tạo, cập nhật, xóa đến lấy thông tin. Điểm đặc biệt của service này là logic phân quyền truy cập động, đảm bảo người dùng chỉ thấy được dữ liệu mà họ được phép.
+*   **Quản lý Bài học trong Khóa học (CourseLessonService):** Quản lý mối quan hệ giữa khóa học và bài học. Cho phép giảng viên thêm, xóa, sắp xếp thứ tự các bài học và thiết lập các điều kiện tiên quyết (prerequisite). Service này cũng chịu trách nhiệm đồng bộ lại tổng số bài học của khóa học và cập nhật tiến độ của học viên khi cấu trúc khóa học thay đổi.
+*   **Quản lý Tài liệu Khóa học (CourseDocumentService):** Cho phép giảng viên đính kèm các tài liệu (PDF, ZIP,...) cho toàn bộ khóa học. Chỉ những học viên đã đăng ký, giảng viên và quản trị viên mới có quyền truy cập và tải về các tài liệu này.
+*   **Quản lý Đánh giá Khóa học (CourseReviewService):** Cho phép học viên đã hoàn thành khóa học để lại đánh giá (rating và bình luận). Các đánh giá này cần được giảng viên hoặc quản trị viên phê duyệt trước khi hiển thị công khai.
+
+#### 4.2. Usecase và Sơ đồ Tuần tự (Sequence Diagram)
+
+Dưới đây là phân tích một số usecase tiêu biểu và sơ đồ tuần tự minh họa.
+
+##### 4.2.1. Usecase: Giảng viên tạo một Khóa học mới
+
+*   **Mô tả:** Một giảng viên (`INSTRUCTOR`) tạo một khóa học mới bằng cách cung cấp các thông tin cần thiết (tiêu đề, mô tả, danh mục) và một ảnh thumbnail. Hệ thống sẽ xác thực thông tin, kiểm tra quyền, lưu thông tin khóa học, lưu trữ ảnh thumbnail và trả về thông tin khóa học đã tạo.
+*   **Sơ đồ tuần tự:**
+    ```plantuml
+    @startuml
+    actor Instructor
+    boundary "CourseController" as Boundary
+    control "CourseService" as Control
+    control "FileStorageService" as FileControl
+    entity "Repositories" as EntityDb
+
+    activate Instructor
+    Instructor -> Boundary: POST /courses\n(courseJson, thumbnailFile)
+    activate Boundary
+
+    Boundary -> Control: createCourse(request, thumbnail)
+    activate Control
+
+    Control -> EntityDb: findByCategoryName(name)
+    activate EntityDb
+    EntityDb --> Control: category
+    deactivate EntityDb
+
+    Control -> EntityDb: existsByTitle(title)
+    activate EntityDb
+    EntityDb --> Control: false
+    deactivate EntityDb
+
+    Control -> Control: Get current user (Instructor)
+    Control -> EntityDb: findByUsername(username)
+    activate EntityDb
+    EntityDb --> Control: instructorUser
+    deactivate EntityDb
+
+    alt thumbnailFile is present
+        Control -> FileControl: storeFile(thumbnailFile)
+        activate FileControl
+        FileControl --> Control: storedFileName
+        deactivate FileControl
+    end
+
+    Control -> EntityDb: courseRepository.save(course)
+    activate EntityDb
+    EntityDb --> Control: savedCourse
+    deactivate EntityDb
+
+    Control --> Boundary: courseResponse
+    deactivate Control
+
+    Boundary --> Instructor: ApiResponse(courseResponse)
+    deactivate Boundary
+    deactivate Instructor
+    @enduml
+    ```
+
+##### 4.2.2. Usecase: Học viên xem chi tiết một Khóa học
+
+*   **Mô tả:** Một người dùng (có thể là khách, học viên) truy cập trang chi tiết của một khóa học. Hệ thống sẽ kiểm tra quyền của người dùng và trạng thái của khóa học để quyết định lượng thông tin trả về.
+*   **Sơ đồ tuần tự:**
+    ```plantuml
+    @startuml
+    actor User
+    boundary "CourseController" as Boundary
+    control "CourseService" as Control
+    entity "CourseRepository" as CourseEntity
+    entity "CourseReviewRepository" as ReviewEntity
+    
+    activate User
+    User -> Boundary: GET /courses/{courseId}
+    activate Boundary
+
+    Boundary -> Control: getCourseById(courseId)
+    activate Control
+
+    Control -> CourseEntity: findById(courseId)
+    activate CourseEntity
+    CourseEntity --> Control: course
+    deactivate CourseEntity
+
+    Control -> Control: getAuthentication() & checkAccessLevel(course, auth)
+    Control --> Control: accessLevel = BASIC_ACCESS
+
+    Control -> Control: mapCourseToResponse(course, false)
+    Control -> ReviewEntity: findAverageRating(courseId)
+    activate ReviewEntity
+    ReviewEntity --> Control: avgRating
+    deactivate ReviewEntity
+
+    Control -> ReviewEntity: countReviews(courseId)
+    activate ReviewEntity
+    ReviewEntity --> Control: totalReviews
+    deactivate ReviewEntity
+
+    Control --> Boundary: courseResponse (basic info)
+    deactivate Control
+    
+    Boundary --> User: ApiResponse(courseResponse)
+    deactivate Boundary
+    deactivate User
+    @enduml
+    ```
+
+##### 4.2.3. Usecase: Giảng viên thêm một Bài học vào Khóa học
+
+*   **Mô tả:** Giảng viên thêm một bài học đã có sẵn vào một khóa học, xác định thứ tự và điều kiện tiên quyết. Hệ thống sẽ cập nhật cấu trúc khóa học, đồng bộ lại `totalLessons` và cập nhật lại tiến độ (`progress`) của tất cả học viên đang theo học.
+*   **Sơ đồ tuần tự:**
+    ```plantuml
+    @startuml
+    actor Instructor
+    boundary "CourseLessonController" as Boundary
+    control "CourseLessonService" as CLControl
+    control "ProgressService" as ProgControl
+    entity "Repositories" as EntityDb
+
+    activate Instructor
+    Instructor -> Boundary: POST /courses/{id}/lessons\n(lessonId, orderIndex, ...)
+    activate Boundary
+    
+    Boundary -> CLControl: addLessonToCourse(courseId, request)
+    activate CLControl
+    
+    CLControl -> EntityDb: findCourseById(courseId)
+    CLControl -> EntityDb: findLessonById(lessonId)
+    CLControl -> CLControl: checkCoursePermission()
+    
+    CLControl -> EntityDb: courseLessonRepo.save(courseLesson)
+    activate EntityDb
+    EntityDb --> CLControl: savedCourseLesson
+    deactivate EntityDb
+    
+    CLControl -> CLControl: syncCourseTotalLessons(course)
+    note right: Cập nhật Course.totalLessons
+    
+    CLControl -> EntityDb: enrollmentRepo.findByCourse(course)
+    activate EntityDb
+    EntityDb --> CLControl: enrollments
+    deactivate EntityDb
+    
+    loop for each enrollment
+        CLControl -> ProgControl: recalculateAndSaveEnrollmentProgress(enrollment)
+        activate ProgControl
+        ProgControl --> CLControl
+        deactivate ProgControl
+    end
+    
+    CLControl --> Boundary: courseLessonResponse
+    deactivate CLControl
+    
+    Boundary --> Instructor: ApiResponse
+    deactivate Boundary
+    deactivate Instructor
+    @enduml
+    ```
+
+##### 4.2.4. Usecase: Học viên gửi Đánh giá cho Khóa học
+
+*   **Mô tả:** Một học viên đã ghi danh và hoàn thành khóa học có thể gửi đánh giá (rating và bình luận). Hệ thống kiểm tra điều kiện (đã hoàn thành, chưa đánh giá) trước khi lưu đánh giá ở trạng thái "chờ phê duyệt".
+*   **Sơ đồ tuần tự:**
+    ```plantuml
+    @startuml
+    actor Student
+    boundary "CourseReviewController" as Boundary
+    control "CourseReviewService" as Control
+    entity "Repositories" as EntityDb
+
+    activate Student
+    Student -> Boundary: POST /courses/{id}/reviews\n(rating, comment)
+    activate Boundary
+
+    Boundary -> Control: createReview(request, courseId)
+    activate Control
+
+    Control -> Control: Get current user (Student)
+    Control -> EntityDb: findByUsername()
+    activate EntityDb
+    EntityDb --> Control: studentUser
+    deactivate EntityDb
+
+    Control -> EntityDb: findCourseById(courseId)
+    activate EntityDb
+    EntityDb --> Control: course
+    deactivate EntityDb
+
+    Control -> EntityDb: findEnrollment(studentId, courseId)
+    activate EntityDb
+    EntityDb --> Control: enrollment
+    deactivate EntityDb
+
+    alt enrollment is not completed
+        Control --> Boundary: Exception (CANNOT_REVIEW)
+        Boundary --> Student: ErrorResponse
+        destroy Control
+        destroy Boundary
+    end
+    
+    Control -> EntityDb: existsReview(studentId, courseId)
+    activate EntityDb
+    EntityDb --> Control: false
+    deactivate EntityDb
+
+    Control -> EntityDb: reviewRepository.save(review)
+    note right: review.isApproved = false
+    activate EntityDb
+    EntityDb --> Control: savedReview
+    deactivate EntityDb
+    
+    Control --> Boundary: reviewResponse
+    deactivate Control
+
+    Boundary --> Student: ApiResponse(reviewResponse)
+    deactivate Boundary
+    deactivate Student
+    @enduml
+    ```
+
+#### 4.3. Nghiệp vụ Quản lý Bài học (Lesson)
+
+*   **Tổng quan:** `Lesson` là một thực thể độc lập, có thể được tái sử dụng trong nhiều khóa học khác nhau. Giảng viên tạo ra các bài học, sau đó thêm chúng vào các khóa học thông qua bảng trung gian `CourseLesson`.
+*   **Các chức năng chính:**
+    *   **CRUD cho `Lesson`:** Giảng viên/Admin có thể tạo, sửa, xóa các bài học. Một bài học không thể bị xóa nếu nó đang được sử dụng trong ít nhất một khóa học.
+    *   **Phân quyền truy cập:** Logic phân quyền cho `Lesson` cũng rất chi tiết. Người dùng chỉ có thể xem nội dung đầy đủ của một bài học nếu họ là Admin, Giảng viên, hoặc là Học viên đã đăng ký một khóa học có chứa bài học đó. Nếu không, họ chỉ thấy được thông tin cơ bản như tiêu đề.
+    *   **Thống kê:** Cung cấp API để thống kê kết quả làm bài quiz của một bài học trong bối cảnh một khóa học cụ thể, giúp giảng viên theo dõi hiệu quả.
+
+*   **Usecase: Giảng viên tạo một Bài học mới**
+    *   **Mô tả:** Giảng viên tạo một bài học mới với tiêu đề, nội dung... Bài học này sau đó có thể được thêm vào nhiều khóa học khác nhau.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Instructor
+        boundary "LessonController" as Boundary
+        control "LessonService" as Control
+        entity "LessonRepository" as EntityDb
+        
+        activate Instructor
+        Instructor -> Boundary: POST /lessons\n(title, content, ...)
+        activate Boundary
+        
+        Boundary -> Control: createLesson(request)
+        activate Control
+        
+        Control -> Control: Get current user (Instructor)
+        Control -> EntityDb: lessonRepository.save(lesson)
+        activate EntityDb
+        EntityDb --> Control: savedLesson
+        deactivate EntityDb
+        
+        Control --> Boundary: lessonResponse
+        deactivate Control
+        
+        Boundary --> Instructor: ApiResponse(lessonResponse)
+        deactivate Boundary
+        deactivate Instructor
+        @enduml
+        ```
+
+#### 4.4. Nghiệp vụ Quản lý Kiểm tra (Quiz)
+
+*   **Tổng quan:** Đây là một trong những module phức tạp nhất. Mỗi bài học chỉ có thể có một bài kiểm tra (`1-1 relationship`). Hệ thống quản lý toàn bộ vòng đời của một bài kiểm tra, từ khâu tạo câu hỏi, cho phép học viên làm bài, đến khi chấm điểm và thống kê.
+*   **Các chức năng chính:**
+    *   **Tạo Quiz và Câu hỏi:** Giảng viên có thể tạo `Quiz` với nhiều thiết lập (thời gian làm bài, số lần làm lại, phương pháp tính điểm...). Sau đó, họ thêm các `QuizQuestion` (câu hỏi) và `QuizAnswer` (câu trả lời) vào quiz.
+    *   **Học viên làm bài:** Khi học viên bắt đầu làm bài, một bản ghi `QuizAttempt` được tạo ra. Các câu trả lời của học viên được lưu trong `QuizAttemptAnswer`.
+    *   **Chấm điểm:** Khi học viên nộp bài, hệ thống sẽ chấm điểm và trả về kết quả.
+    *   **Phân quyền:** Tương tự các module khác, việc xem chi tiết quiz, xem đáp án đúng, hay xem kết quả của người khác đều được phân quyền chặt chẽ. Học viên chỉ có thể xem quiz dưới dạng "đề bài" (không có đáp án).
+
+*   **Usecase: Học viên làm bài Kiểm tra**
+    *   **Mô tả:** Học viên bắt đầu một lượt làm bài kiểm tra. Hệ thống tạo một `QuizAttempt`, sau đó học viên gửi các câu trả lời của mình. Khi nộp bài, hệ thống sẽ chấm điểm và trả về kết quả.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Student
+        boundary "QuizAttemptController" as Boundary
+        control "QuizAttemptService" as Control
+        entity "Repositories" as EntityDb
+        
+        activate Student
+        Student -> Boundary: POST /attempts/start\n(quizId, courseId)
+        note right: Bắt đầu làm bài
+        activate Boundary
+        
+        Boundary -> Control: startAttempt(request)
+        activate Control
+        
+        Control -> EntityDb: findQuizById()
+        Control -> EntityDb: findEnrollment()
+        Control -> Control: check permission & attempts left
+        
+        Control -> EntityDb: attemptRepo.save(newAttempt)
+        activate EntityDb
+        EntityDb --> Control: savedAttempt
+        deactivate EntityDb
+        
+        Control --> Boundary: attemptResponse (without answers)
+        deactivate Control
+        
+        Boundary --> Student: ApiResponse(attemptResponse)
+        deactivate Boundary
+        
+        Student -> Boundary: POST /attempts/{id}/submit\n([questionId, answerId], ...)
+        note right: Nộp bài
+        activate Boundary
+        
+        Boundary -> Control: submitAttempt(attemptId, answers)
+        activate Control
+        
+        Control -> EntityDb: findAttemptById(attemptId)
+        Control -> Control: calculateScore(attempt, answers)
+        note right: Chấm điểm, tính toán kết quả
+        
+        Control -> EntityDb: attemptRepo.save(completedAttempt)
+        Control -> EntityDb: progressRepo.update()
+        
+        Control --> Boundary: resultResponse
+        deactivate Control
+        
+        Boundary --> Student: ApiResponse(resultResponse)
+        deactivate Boundary
+        deactivate Student
+        @enduml
+        ```
+
+#### 4.5. Nghiệp vụ Quản lý Tài liệu (Document Management)
+
+*   **Tổng quan:** Hệ thống cho phép Giảng viên tải lên các tài liệu đính kèm cho từng bài học cụ thể (`LessonDocument`). Nghiệp vụ này tách biệt với tài liệu của toàn khóa học (`CourseDocument`). Việc truy cập và tải tài liệu được phân quyền chặt chẽ.
+*   **Sơ đồ Usecase:**
+    ```plantuml
+    @startuml
+    left to right direction
+    actor "Instructor" as I
+    actor "Student" as S
+
+    rectangle "Quản lý Tài liệu Bài học" {
+      I -- (Tải tài liệu lên)
+      I -- (Xóa tài liệu)
+      S -- (Xem danh sách tài liệu)
+      S -- (Tải tài liệu về)
+    }
+    @enduml
+    ```
+*   **Usecase: Giảng viên tải tài liệu cho Bài học**
+    *   **Mô tả:** Giảng viên chọn một bài học và tải lên một tệp tin (ví dụ: PDF, ZIP). Hệ thống sẽ lưu trữ tệp tin này và liên kết nó với bài học.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Instructor
+        boundary "LessonDocumentController" as Boundary
+        control "LessonDocumentService" as Control
+        control "FileStorageService" as FileControl
+        entity "Repositories" as EntityDb
+
+        activate Instructor
+        Instructor -> Boundary: POST /lessons/{id}/documents/upload\n(request, file)
+        activate Boundary
+
+        Boundary -> Control: uploadDocument(lessonId, request, file)
+        activate Control
+
+        Control -> EntityDb: findLessonById(lessonId)
+        Control -> Control: checkPermission()
+        Control -> FileControl: storeFile(file)
+        activate FileControl
+        FileControl --> Control: storedFileName
+        deactivate FileControl
+
+        Control -> EntityDb: documentRepo.save(document)
+        activate EntityDb
+        EntityDb --> Control: savedDocument
+        deactivate EntityDb
+
+        Control --> Boundary: documentResponse
+        deactivate Control
+
+        Boundary --> Instructor: ApiResponse(documentResponse)
+        deactivate Boundary
+        deactivate Instructor
+        @enduml
+        ```
+
+#### 4.6. Nghiệp vụ Ghi danh (Enrollment)
+
+*   **Tổng quan:** Đây là nghiệp vụ khởi đầu cho hành trình của học viên. Học viên tìm kiếm và ghi danh vào các khóa học. Hệ thống hỗ trợ cả luồng ghi danh tự động và luồng cần Giảng viên/Admin phê duyệt.
+*   **Sơ đồ Usecase:**
+    ```plantuml
+    @startuml
+    left to right direction
+    actor "Student" as S
+    actor "Instructor" as I
+
+    rectangle "Quản lý Ghi danh" {
+      S -- (Ghi danh vào khóa học)
+      S -- (Hủy ghi danh)
+      S -- (Xem các khóa học của tôi)
+      I -- (Xem danh sách chờ duyệt)
+      I -- (Phê duyệt ghi danh)
+      I -- (Từ chối ghi danh)
+    }
+    @enduml
+    ```
+*   **Usecase: Học viên ghi danh vào khóa học cần phê duyệt**
+    *   **Mô tả:** Học viên yêu cầu ghi danh vào một khóa học được thiết lập là `requiresApproval = true`. Hệ thống sẽ tạo một yêu cầu `Enrollment` với trạng thái `PENDING`. Giảng viên sau đó sẽ thấy yêu cầu này và quyết định phê duyệt hoặc từ chối.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Student
+        boundary "EnrollmentController" as Boundary
+        control "EnrollmentService" as Control
+        entity "CourseRepository" as CourseEntity
+        entity "EnrollmentRepository" as EnrollEntity
+
+        activate Student
+        Student -> Boundary: POST /enrollments/enroll/{courseId}
+        activate Boundary
+
+        Boundary -> Control: enroll(courseId)
+        activate Control
+
+        Control -> Control: getCurrentUser()
+        Control -> CourseEntity: findById(courseId)
+        activate CourseEntity
+        CourseEntity --> Control: course (requiresApproval=true)
+        deactivate CourseEntity
+
+        Control -> EnrollEntity: findByStudentAndCourse()
+        activate EnrollEntity
+        EnrollEntity --> Control: Optional.empty()
+        deactivate EnrollEntity
+
+        Control -> EnrollEntity: save(enrollment)
+        note right: enrollment.status = PENDING
+        activate EnrollEntity
+        EnrollEntity --> Control: savedEnrollment
+        deactivate EnrollEntity
+
+        Control --> Boundary: "Enrollment successful"
+        deactivate Control
+        
+        Boundary --> Student: ApiResponse
+        deactivate Boundary
+        deactivate Student
+        @enduml
+        ```
+
+#### 4.7. Nghiệp vụ Theo dõi Tiến độ (Progress)
+
+*   **Tổng quan:** Module `Progress` là trung tâm của trải nghiệm học tập, tự động theo dõi và cập nhật sự hoàn thành của học viên qua từng bài học và toàn bộ khóa học.
+*   **Các chức năng chính:**
+    *   **Khởi tạo tiến độ:** Khi học viên được ghi danh thành công, hệ thống tự động tạo các bản ghi `Progress` cho từng bài học trong khóa học với trạng thái "chưa hoàn thành".
+    *   **Cập nhật tiến độ tự động:** Hệ thống có cơ chế tự động đánh dấu một bài học là hoàn thành (`isCompleted = true`) dựa trên các điều kiện:
+        1.  Nếu bài học có `Quiz`, học viên phải làm bài và đạt điểm qua.
+        2.  Nếu bài học không có `Quiz` nhưng có tài liệu, học viên phải xem hết tất cả tài liệu.
+        3.  Nếu bài học không có cả `Quiz` và tài liệu, nó sẽ được tự động đánh dấu hoàn thành.
+    *   **Tính toán tiến độ tổng thể:** Mỗi khi tiến độ của một bài học thay đổi, hệ thống sẽ tính toán lại phần trăm hoàn thành chung của toàn bộ khóa học cho học viên đó và cập nhật vào `Enrollment`.
+*   **Sơ đồ Usecase:**
+    ```plantuml
+    @startuml
+    actor Student
+    actor System
+
+    rectangle "Theo dõi Tiến độ" {
+      Student -- (Xem tiến độ)
+      System -- (Khởi tạo tiến độ)
+      (Đánh dấu bài học hoàn thành) .> (Tính toán lại tiến độ khóa học) : <<includes>>
+      System -- (Đánh dấu bài học hoàn thành)
+    }
+    @enduml
+    ```
+*   **Usecase: Hệ thống cập nhật tiến độ khi học viên xem hết tài liệu**
+    *   **Mô tả:** Một bài học yêu cầu học viên phải xem hết tài liệu để hoàn thành. Khi học viên xem tài liệu cuối cùng của bài học đó, hệ thống sẽ tự động kích hoạt một chuỗi sự kiện: đánh dấu bài học đó là hoàn thành, sau đó tính toán và cập nhật lại phần trăm tiến độ của cả khóa học.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Student
+        boundary "DocumentViewController" as Boundary
+        control "ProgressService" as Control
+        entity "Repositories" as EntityDb
+
+        activate Student
+        Student -> Boundary: GET /documents/{docId}/view
+        activate Boundary
+        
+        Boundary -> Control: trackDocumentView(user, docId)
+        activate Control
+        
+        Control -> EntityDb: documentViewRepo.save(view)
+        Control -> Control: checkLessonCompletionByDocuments(user, lessonId)
+        
+        Control -> EntityDb: countDocumentsByLesson(lessonId)
+        Control -> EntityDb: countViewedDocumentsByUser(user, lessonId)
+        
+        alt All documents are viewed
+            Control -> EntityDb: progressRepo.findByEnrollmentAndLesson()
+            activate EntityDb
+            EntityDb --> Control: progress
+            deactivate EntityDb
+            
+            note right of Control: progress.isCompleted = true
+            Control -> EntityDb: progressRepo.save(progress)
+            
+            Control -> Control: recalculateAndSaveEnrollmentProgress(enrollment)
+            note right of Control: Cập nhật Enrollment.progress
+            Control -> EntityDb: enrollmentRepo.save(enrollment)
+        end
+        
+        Control --> Boundary
+        deactivate Control
+        
+        Boundary --> Student: "OK"
+        deactivate Boundary
+        deactivate Student
+        @enduml
+        ```
+
+#### 4.8. Nghiệp vụ Làm bài Kiểm tra (Student)
+
+*   **Tổng quan:** Luồng làm bài kiểm tra là một tương tác phức tạp, đòi hỏi hệ thống phải quản lý trạng thái, tính toán thời gian, ghi nhận câu trả lời và chấm điểm một cách chính xác.
+*   **Sơ đồ Usecase:**
+    ```plantuml
+    @startuml
+    left to right direction
+    actor "Student" as S
+
+    rectangle "Làm bài Kiểm tra" {
+      S -- (Xem trạng thái Quiz)
+      S -- (Bắt đầu làm bài)
+      S -- (Nộp bài)
+      S -- (Xem lại kết quả)
+    }
+    
+    (Bắt đầu làm bài) .> (Kiểm tra điều kiện) : <<includes>>
+    (Nộp bài) .> (Hệ thống chấm điểm) : <<includes>>
+
+    note "Kiểm tra số lần làm bài còn lại" as N1
+    (Kiểm tra điều kiện) .. N1
+    @enduml
+    ```
+*   **Usecase: Học viên làm bài Kiểm tra**
+    *   **Mô tả:** Học viên bắt đầu một lượt làm bài kiểm tra. Hệ thống tạo một `QuizAttempt`, sau đó học viên gửi các câu trả lời của mình. Khi nộp bài, hệ thống sẽ chấm điểm và trả về kết quả.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Student
+        boundary "QuizAttemptController" as Boundary
+        control "QuizAttemptService" as Control
+        entity "Repositories" as EntityDb
+        
+        activate Student
+        Student -> Boundary: POST /attempts/start\n(quizId, courseId)
+        note right: Bắt đầu làm bài
+        activate Boundary
+        
+        Boundary -> Control: startAttempt(request)
+        activate Control
+        
+        Control -> EntityDb: findQuizById()
+        Control -> EntityDb: findEnrollment()
+        Control -> Control: check permission & attempts left
+        
+        Control -> EntityDb: attemptRepo.save(newAttempt)
+        activate EntityDb
+        EntityDb --> Control: savedAttempt
+        deactivate EntityDb
+        
+        Control --> Boundary: attemptResponse (without answers)
+        deactivate Control
+        
+        Boundary --> Student: ApiResponse(attemptResponse)
+        deactivate Boundary
+        
+        Student -> Boundary: POST /attempts/{id}/submit\n([questionId, answerId], ...)
+        note right: Nộp bài
+        activate Boundary
+        
+        Boundary -> Control: submitAttempt(attemptId, answers)
+        activate Control
+        
+        Control -> EntityDb: findAttemptById(attemptId)
+        Control -> Control: calculateScore(attempt, answers)
+        note right: Chấm điểm, tính toán kết quả
+        
+        Control -> EntityDb: attemptRepo.save(completedAttempt)
+        Control -> EntityDb: progressRepo.update()
+        
+        Control --> Boundary: resultResponse
+        deactivate Control
+        
+        Boundary --> Student: ApiResponse(resultResponse)
+        deactivate Boundary
+        deactivate Student
+        @enduml
+        ```
+
+#### 4.9. Nghiệp vụ Thống kê (Admin)
+
+*   **Tổng quan:** Hệ thống cung cấp một trang tổng quan (dashboard) dành riêng cho `ADMIN` để theo dõi các chỉ số quan trọng về hoạt động của người dùng trên nền tảng.
+*   **Các chức năng chính:**
+    *   Xem tổng số lượng người dùng.
+    *   Thống kê số lượng người dùng mới được tạo theo từng tháng (phân loại theo vai trò: Admin, Instructor, Student).
+    *   Xem biểu đồ phân phối vai trò (tỷ lệ phần trăm của mỗi vai trò).
+    *   Xem biểu đồ trạng thái người dùng (tỷ lệ tài khoản đang hoạt động/bị khóa).
+*   **Sơ đồ Usecase:**
+    ```plantuml
+    @startuml
+    left to right direction
+    actor "Admin" as A
+
+    rectangle "Xem Thống kê" {
+        A -- (Xem Dashboard tổng quan)
+    }
+    (Xem Dashboard tổng quan) ..> (Xem số liệu người dùng) : <<extends>>
+    (Xem Dashboard tổng quan) ..> (Xem biểu đồ vai trò) : <<extends>>
+    (Xem Dashboard tổng quan) ..> (Xem biểu đồ trạng thái) : <<extends>>
+    @enduml
+    ```
+*   **Usecase: Admin xem Dashboard thống kê**
+    *   **Mô tả:** Admin truy cập vào trang thống kê. Hệ thống sẽ truy vấn cơ sở dữ liệu để tổng hợp các thông tin về người dùng và trả về một DTO chứa tất cả các số liệu cần thiết để hiển thị trên dashboard.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Admin
+        boundary "StatisticController" as Boundary
+        control "StatisticService" as Control
+        entity "UserRepository" as UserEntity
+
+        activate Admin
+        Admin -> Boundary: GET /statistics/overview
+        activate Boundary
+
+        Boundary -> Control: getOverallStats()
+        activate Control
+
+        Control -> UserEntity: count()
+        activate UserEntity
+        UserEntity --> Control: totalUsers
+        deactivate UserEntity
+
+        loop 12 months
+            Control -> UserEntity: countByRoleAndDate(...)
+            activate UserEntity
+            UserEntity --> Control: monthlyCounts
+            deactivate UserEntity
+        end
+        
+        Control -> UserEntity: countByRoleName(...)
+        activate UserEntity
+        UserEntity --> Control: roleCounts
+        deactivate UserEntity
+
+        Control -> UserEntity: countByEnabled(...)
+        activate UserEntity
+        UserEntity --> Control: statusCounts
+        deactivate UserEntity
+
+        Control -> Control: build OverallStatsResponse
+        Control --> Boundary: statsResponse
+        deactivate Control
+        
+        Boundary --> Admin: ApiResponse(statsResponse)
+        deactivate Boundary
+        deactivate Admin
+        @enduml
+        ```
+
+#### 4.10. Nghiệp vụ Khám phá & Ghi danh Khóa học (Student)
+
+*   **Tổng quan:** Cung cấp cho học viên khả năng tìm kiếm, duyệt qua danh sách các khóa học có sẵn và thực hiện ghi danh để bắt đầu quá trình học tập.
+*   **Sơ đồ Usecase:**
+    ```plantuml
+    @startuml
+    left to right direction
+    actor "Student" as S
+
+    rectangle "Khám phá & Ghi danh" {
+      S -- (Xem danh sách khóa học)
+      S -- (Tìm kiếm & Lọc khóa học)
+      S -- (Xem chi tiết khóa học)
+      S -- (Ghi danh vào khóa học)
+    }
+    
+    (Xem danh sách khóa học) .> (Xem chi tiết khóa học) : <<extends>>
+    (Xem chi tiết khóa học) .> (Ghi danh vào khóa học) : <<extends>>
+    @enduml
+    ```
+*   **Usecase: Học viên duyệt và đăng ký khóa học**
+    *   **Mô tả:** Học viên truy cập hệ thống, xem danh sách các khóa học đang hoạt động (`active`). Sau khi chọn một khóa học, họ xem thông tin chi tiết và quyết định ghi danh.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Student
+        boundary "CourseController" as CourseBoundary
+        boundary "EnrollmentController" as EnrollBoundary
+        control "CourseService" as CourseControl
+        control "EnrollmentService" as EnrollControl
+
+        activate Student
+        Student -> CourseBoundary: GET /courses/public\n(filter, pageable)
+        activate CourseBoundary
+
+        CourseBoundary -> CourseControl: getCourses(filter, pageable)
+        note right of CourseControl: Chỉ trả về các khóa học\nđang hoạt động (active)
+        activate CourseControl
+        CourseControl --> CourseBoundary: Page<CourseResponse>
+        deactivate CourseControl
+        
+        CourseBoundary --> Student: ApiResponse(courseList)
+        deactivate CourseBoundary
+
+        Student -> EnrollBoundary: POST /enrollments/courses/{courseId}
+        activate EnrollBoundary
+        
+        EnrollBoundary -> EnrollControl: enroll(courseId)
+        activate EnrollControl
+        EnrollControl --> EnrollBoundary: "Enrollment successful"
+        deactivate EnrollControl
+        
+        EnrollBoundary --> Student: ApiResponse(message)
+        deactivate EnrollBoundary
+        deactivate Student
+        @enduml
+        ```
+
+#### 4.11. Nghiệp vụ Theo dõi Tiến độ học tập (Student)
+
+*   **Tổng quan:** Sau khi ghi danh, học viên có thể theo dõi tiến độ của mình trong từng khóa học, xem họ đã hoàn thành bao nhiêu phần trăm và những bài học nào đã xong.
+*   **Sơ đồ Usecase:**
+    ```plantuml
+    @startuml
+    left to right direction
+    actor "Student" as S
+
+    rectangle "Theo dõi Tiến độ" {
+      S -- (Xem các khóa học của tôi)
+      S -- (Xem tiến độ tổng quan)
+      S -- (Xem tiến độ chi tiết từng bài học)
+    }
+    
+    (Xem các khóa học của tôi) .> (Xem tiến độ tổng quan) : <<extends>>
+    (Xem tiến độ tổng quan) .> (Xem tiến độ chi tiết từng bài học) : <<extends>>
+    @enduml
+    ```
+*   **Usecase: Học viên xem tiến độ một khóa học**
+    *   **Mô tả:** Học viên vào trang "Khóa học của tôi", chọn một khóa học để xem tiến độ. Hệ thống trả về thông tin ghi danh (bao gồm phần trăm hoàn thành tổng thể) và danh sách tiến độ chi tiết của từng bài học (đã hoàn thành hay chưa).
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Student
+        boundary "EnrollmentController" as EnrollBoundary
+        boundary "ProgressController" as ProgBoundary
+        control "EnrollmentService" as EnrollControl
+        control "ProgressService" as ProgControl
+        
+        activate Student
+        Student -> EnrollBoundary: GET /enrollments/my/course/{courseId}
+        note right: Lấy tiến độ tổng quan
+        activate EnrollBoundary
+        
+        EnrollBoundary -> EnrollControl: getMyEnrollmentForCourse(courseId)
+        activate EnrollControl
+        EnrollControl --> EnrollBoundary: enrollmentResponse (chứa progress %)
+        deactivate EnrollControl
+        
+        EnrollBoundary --> Student: ApiResponse(enrollmentResponse)
+        deactivate EnrollBoundary
+        
+        Student -> ProgBoundary: GET /enrollments/{enrollmentId}/progress
+        note right: Lấy tiến độ chi tiết từng bài học
+        activate ProgBoundary
+        
+        ProgBoundary -> ProgControl: getProgressByEnrollment(enrollmentId)
+        activate ProgControl
+        ProgControl --> ProgBoundary: List<ProgressResponse>
+        deactivate ProgControl
+        
+        ProgBoundary --> Student: ApiResponse(progressList)
+        deactivate ProgBoundary
+        deactivate Student
+        @enduml
+        ```
+
+### 5. Kết quả thực hiện
 
 **Kết quả chương trình**
 
-Hệ thống backend đã hoàn thành và cung cấp một bộ RESTful API đầy đủ để quản lý một nền tảng khóa học trực tuyến. Các chức năng chính đã được triển khai và hoạt động, bao gồm:
+Hệ thống backend đã hoàn thành và cung cấp một bộ RESTful API đầy đủ, sẵn sàng cho việc tích hợp với một ứng dụng frontend để tạo thành một nền tảng quản lý khóa học trực tuyến hoàn chỉnh.
 
-*   Quản lý người dùng và phân quyền.
-*   Quản lý toàn diện khóa học, bài học và tài liệu.
-*   Ghi danh và theo dõi tiến độ của học viên.
-*   Hệ thống đánh giá, nhận xét.
-*   API thống kê cho quản trị viên.
+*   **Các chức năng đã triển khai:**
+    *   **Xác thực và phân quyền:** Quản lý toàn diện người dùng, vai trò, quyền hạn. Cung cấp API đăng nhập, đăng ký, đăng xuất (vô hiệu hóa token), và lấy thông tin người dùng hiện tại. Phân quyền chi tiết trên từng API cho 3 vai trò: `STUDENT`, `INSTRUCTOR`, `ADMIN`.
+    *   **Quản lý Khóa học và Danh mục:** CRUD (Tạo, Đọc, Cập nhật, Xóa) cho `Category`, `Course`, `Lesson`, và quản lý liên kết giữa bài học và khóa học (`CourseLesson`).
+    *   **Quản lý Nội dung:** Tải lên và quản lý tài liệu cho khóa học (`CourseDocumentController`) và bài học (`LessonDocumentController`).
+    *   **Hệ thống Quiz:** Tạo và quản lý `Quiz` với nhiều tùy chọn (thời gian, số lần thử, v.v.), câu hỏi (`QuizQuestion`), và câu trả lời (`QuizAnswer`).
+    *   **Tương tác của Học viên:**
+        *   Đăng ký/ghi danh vào khóa học (`EnrollmentController`).
+        *   Thực hiện bài kiểm tra (`QuizAttemptController`).
+        *   Theo dõi tiến độ học tập (`ProgressController`).
+        *   Đánh giá và xem đánh giá khóa học (`CourseReviewController`).
+        *   Theo dõi lượt xem tài liệu (`DocumentViewController`).
+    *   **Chức năng cho Giảng viên:** Cung cấp các API riêng để quản lý các khóa học, học viên của mình (`InstructorController`).
+    *   **Chức năng cho Quản trị viên:** Cung cấp API thống kê tổng quan (số lượng người dùng, khóa học, doanh thu, v.v.) và quản lý toàn bộ tài nguyên hệ thống (`AdminController`, `StatisticController`).
+    *   **Tìm kiếm và Lọc động:** Cung cấp API tìm kiếm/lọc động cho người dùng và khóa học với nhiều tiêu chí kết hợp.
 
-**Phân tích các kết quả thu được dựa theo giải pháp đề xuất**
+**Phân tích các kết quả thu được**
 
-*   Hệ thống đáp ứng tốt các yêu cầu chức năng đã đề ra.
-*   Cấu trúc phân lớp giúp cho việc phát triển và bảo trì trở nên dễ dàng hơn.
-*   Việc sử dụng Spring Security đã đảm bảo tính bảo mật và phân quyền chặt chẽ cho hệ thống.
-*   API được thiết kế theo chuẩn REST, dễ dàng cho việc tích hợp với các ứng dụng frontend.
+*   Hệ thống đáp ứng đầy đủ và chính xác các yêu cầu chức năng của bài toán đã đề ra, từ quản lý cơ bản đến các luồng nghiệp vụ phức tạp như quiz và theo dõi tiến độ.
+*   Cấu trúc phân lớp rõ ràng và việc áp dụng các design pattern tốt (DTO, Specification, Mapper) giúp mã nguồn sạch sẽ, dễ hiểu, dễ bảo trì và mở rộng.
+*   Hệ thống bảo mật chặt chẽ, sử dụng Spring Security và JWT với cơ chế phân quyền `@PreAuthorize`, đảm bảo chỉ những người dùng có thẩm quyền mới có thể truy cập tài nguyên tương ứng.
+*   Swagger UI cung cấp một giao diện trực quan để kiểm thử và khám phá toàn bộ các API đã xây dựng, giúp đẩy nhanh quá trình phát triển và tích hợp với frontend.
+*   Việc sử dụng JPA Specification đã tạo ra các API tìm kiếm rất mạnh mẽ và linh hoạt, giảm thiểu việc phải viết nhiều phương thức truy vấn khác nhau ở backend.
 
-### Kết luận
+### 6. Kết luận
 
 **Hiệu quả đạt được và các điểm tồn tại**
 
 *   **Hiệu quả:**
-    *   Xây dựng thành công một backend hoàn chỉnh, sẵn sàng để tích hợp với frontend.
-    *   Hệ thống có khả năng mở rộng trong tương lai.
-    *   Mã nguồn được tổ chức tốt, dễ đọc và dễ tiếp cận.
+    *   Xây dựng thành công một backend hoàn chỉnh, có cấu trúc tốt, bảo mật và khả năng mở rộng cao.
+    *   Mã nguồn có chất lượng tốt, tuân thủ các thông lệ tốt nhất trong phát triển phần mềm với Spring Boot.
+    *   Hệ thống ổn định, logic nghiệp vụ được đóng gói rõ ràng trong các service, sẵn sàng để tích hợp và đưa vào sử dụng.
 
-*   **Điểm tồn tại:**
-    *   Thiếu vắng hệ thống test tự động (Unit Test, Integration Test).
-    *   Cần làm giàu tài liệu API trên Swagger UI bằng các annotations chi tiết (`@Operation`, `@ApiResponse`...).
-    *   Có thể tối ưu hóa một số câu truy vấn CSDL để cải thiện hiệu năng khi dữ liệu lớn.
+*   **Điểm tồn tại và hướng phát triển:**
+    *   **Thiếu kiểm thử tự động:** Dự án hiện thiếu các bài test (Unit Test cho `Service`, Integration Test cho `Controller`). Việc bổ sung test là bước đi quan trọng tiếp theo để đảm bảo chất lượng, sự ổn định của hệ thống khi có sự thay đổi hoặc thêm mới chức năng trong tương lai.
+    *   **Làm giàu tài liệu API:** Mặc dù đã có Swagger UI, cần bổ sung các annotation như `@Operation`, `@ApiResponse`, `@Parameter` trong mã nguồn của `Controller` để tài liệu API trở nên chi tiết, rõ ràng và thân thiện hơn với người dùng (ví dụ: lập trình viên frontend).
+    *   **Tối ưu hóa hiệu năng:** Với lượng dữ liệu lớn, cần xem xét việc đánh index cho các cột thường xuyên được truy vấn trong CSDL (ví dụ: các khóa ngoại, các trường dùng để lọc). Ngoài ra, có thể áp dụng Caching (ví dụ: Redis) cho các dữ liệu ít thay đổi như danh mục, thông tin vai trò/quyền hạn để giảm tải cho database.
+    *   **CI/CD:** Xây dựng quy trình Tích hợp và Triển khai liên tục (CI/CD) sử dụng các công cụ như Jenkins, GitLab CI/CD hoặc GitHub Actions để tự động hóa việc build, test và deploy ứng dụng mỗi khi có thay đổi, giúp quy trình phát triển nhanh và đáng tin cậy hơn.
 
 **Nêu rõ đóng góp của cá nhân**
 
-(Phần này bạn sẽ tự điền dựa trên đóng góp thực tế của mình vào dự án)
-Ví dụ:
-*   Phân tích và thiết kế cơ sở dữ liệu.
-*   Xây dựng module quản lý khóa học và bài học.
-*   Triển khai hệ thống xác thực và phân quyền bằng JWT.
-*   ...
-
----
-
-### Phân tích chuyên sâu và Đề xuất cải tiến
-
-Phần này sẽ đi sâu vào các quyết định thiết kế, các luồng nghiệp vụ phức tạp và đưa ra các đề xuất cải tiến cho tương lai.
-
-#### 1. Lý do đằng sau Thiết kế Cơ sở dữ liệu
-
-Thiết kế CSDL được xây dựng theo hướng tiếp cận chuẩn hóa để đảm bảo tính toàn vẹn dữ liệu, giảm thiểu sự trùng lặp và dễ dàng mở rộng.
-
-*   **`User`, `Role`, `Permission`**: Mô hình này triển khai **Kiểm soát truy cập dựa trên vai trò (RBAC)**.
-    *   Một `User` có thể có nhiều `Role` (`@ManyToMany`).
-    *   Một `Role` có thể có nhiều `Permission` (quan hệ này chưa được thể hiện rõ trong entity `Role` nhưng có thể được định nghĩa trong logic của Spring Security).
-    *   **Lý do**: Thiết kế này rất linh hoạt. Thay vì gán quyền trực tiếp cho từng người dùng, ta gán quyền cho vai trò. Khi cần thay đổi quyền, ta chỉ cần sửa ở `Role` thay vì phải sửa cho hàng loạt `User`.
-
-*   **`Course`, `Category`, `User (Instructor)`**:
-    *   Một `Course` thuộc về một `Category` (`@ManyToOne`) và được tạo bởi một `User` có vai trò `Instructor` (`@ManyToOne`).
-    *   **Lý do**: Giúp phân loại, tổ chức khóa học một cách khoa học. Việc liên kết trực tiếp đến `User` giúp xác định rõ người chịu trách nhiệm về nội dung khóa học.
-
-*   **`Course`, `Lesson`, `CourseLesson`**:
-    *   Mối quan hệ giữa `Course` và `Lesson` là `ManyToMany`, được thể hiện qua bảng trung gian `CourseLesson`.
-    *   **Lý do**: Thiết kế này cho phép một `Lesson` có thể được tái sử dụng trong nhiều `Course` khác nhau, tiết kiệm thời gian và công sức cho giảng viên khi tạo nội dung có liên quan.
-
-*   **`Enrollment`**: Đây là thực thể trung tâm, kết nối `User` (học viên) và `Course`.
-    *   Nó không chỉ ghi lại việc ai đã đăng ký khóa học nào, mà còn lưu trữ các thông tin quan trọng như ngày đăng ký (`enrollmentDate`), trạng thái (`approvalStatus`), tiến độ (`progress`), và ngày hoàn thành (`completionDate`).
-    *   **Lý do**: Tách riêng logic ghi danh ra một bảng riêng giúp cho bảng `User` và `Course` không bị "phình to" với các thông tin không cốt lõi. Nó cũng giúp cho việc truy vấn các thông tin liên quan đến việc học trở nên hiệu quả hơn.
-
-*   **Hệ thống Quiz (`Quiz`, `QuizQuestion`, `QuizAnswer`, `QuizAttempt`)**:
-    *   Đây là một module được thiết kế chi tiết, cho thấy sự đầu tư vào tính năng tương tác.
-    *   **Lý do**: Cấu trúc này cho phép tạo ra các bài kiểm tra trắc nghiệm đa dạng, lưu lại lịch sử làm bài của học viên (`QuizAttempt`), và cung cấp khả năng chấm điểm tự động.
-
-#### 2. Phân tích các Luồng nghiệp vụ quan trọng
-
-**a. Luồng Đăng ký và Xác thực (Authentication & Authorization)**
-
-1.  **Đăng ký**: Người dùng cung cấp thông tin. Mật khẩu được mã hóa bằng `BCryptPasswordEncoder` trước khi lưu vào CSDL để đảm bảo an toàn.
-2.  **Đăng nhập**:
-    *   Người dùng gửi `username` và `password`.
-    *   `AuthenticationService` sử dụng `AuthenticationManager` của Spring Security để xác thực.
-    *   Nếu thành công, `JwtTokenProvider` sẽ tạo ra một JWT. Token này chứa thông tin về `username` và `roles` của người dùng.
-    *   Token được trả về cho client.
-3.  **Yêu cầu truy cập tài nguyên**:
-    *   Client gửi JWT trong header `Authorization`.
-    *   `JwtAuthenticationFilter` (một bộ lọc custom) sẽ chặn request, xác thực token.
-    *   Nếu token hợp lệ, bộ lọc sẽ tạo một đối tượng `Authentication` và lưu vào `SecurityContextHolder`.
-    *   Spring Security dựa vào thông tin trong `SecurityContextHolder` và các annotation `@PreAuthorize` để quyết định request có được phép thực thi hay không.
-4.  **Đăng xuất**: JWT là stateless, vì vậy không thể "xóa" nó ở server. Giải pháp của dự án là lưu token vào bảng `InvalidatedToken` khi người dùng đăng xuất. `JwtAuthenticationFilter` sẽ kiểm tra xem token có nằm trong bảng này không trước khi xác thực.
-
-**b. Luồng Tạo và Quản lý Khóa học (Instructor)**
-
-1.  **Tạo khóa học**:
-    *   Instructor gửi request `POST /courses` kèm dữ liệu (JSON) và ảnh thumbnail (MultipartFile).
-    *   `CourseController` nhận request. `@PreAuthorize("hasRole('INSTRUCTOR')")` đảm bảo chỉ Instructor mới có thể gọi API này.
-    *   `CourseService` được gọi. Nó kiểm tra xem `Category` có tồn tại không, `title` có trùng không.
-    *   Lấy thông tin Instructor từ `SecurityContextHolder` để gán vào khóa học.
-    *   Ảnh thumbnail được xử lý bởi `FileStorageService` và lưu vào hệ thống file, đường dẫn được lưu vào CSDL.
-    *   Khóa học được lưu vào CSDL.
-2.  **Cập nhật/Xóa**:
-    *   Tương tự luồng tạo, nhưng trước khi thực hiện, `CourseService` có một hàm `checkCoursePermission` quan trọng. Hàm này đảm bảo rằng chỉ có `ADMIN` hoặc chính `Instructor` đã tạo ra khóa học đó mới có quyền sửa/xóa. Đây là một lớp bảo mật nghiệp vụ quan trọng.
-
-#### 3. Các Điểm đã làm thêm/cải tiến so với yêu cầu ban đầu
-
-Dựa trên yêu cầu ban đầu, dự án không chỉ hoàn thành mà còn phát triển thêm nhiều tính năng giá trị:
-
-*   **Hệ thống Quiz hoàn chỉnh**: Yêu cầu ban đầu chỉ nói về "danh sách bài học". Dự án đã xây dựng một hệ thống kiểm tra kiến thức đầy đủ, đây là một điểm cộng lớn cho tính tương tác của nền tảng.
-*   **Quản lý tài liệu chi tiết**: Triển khai `CourseDocument` và `LessonDocument`, cho phép đính kèm nhiều loại tài liệu khác nhau cho từng khóa học và bài học, thay vì chỉ là một mô tả đơn thuần.
-*   **Cơ chế phê duyệt khóa học**: Trường `requiresApproval` trong `Course` và `approvalStatus` trong `Enrollment` cho thấy hệ thống có thể hỗ trợ cả mô hình khóa học trả phí/cần xét duyệt, linh hoạt hơn yêu cầu ban đầu.
-*   **Bảo mật nâng cao**: Ngoài JWT và phân quyền, dự án còn có cơ chế chống brute-force đơn giản (`loginFailCount`) và xử lý đăng xuất cho JWT (`InvalidatedToken`), những điều này không được đề cập trong yêu cầu.
-*   **API Thống kê**: Xây dựng các endpoint thống kê riêng (`StatisticController`, `getPopularCourses`) là một sự chủ động, đáp ứng nhu cầu phân tích của quản trị viên mà yêu cầu ban đầu chỉ nêu chung chung.
-
-#### 4. Đề xuất Giải pháp Cải tiến trong Tương lai
-
-1.  **Hoàn thiện và Tận dụng Swagger/OpenAPI**:
-    *   **Tình trạng**: Hệ thống đã tích hợp `springdoc-openapi-ui`, giúp tự động tạo tài liệu API và giao diện tương tác tại `/swagger-ui.html`.
-    *   **Giải pháp cải tiến**:
-        *   **Làm giàu tài liệu**: Bổ sung các annotation của Swagger (`@Operation`, `@Parameter`, `@ApiResponse`, `@SecurityRequirement`...) vào các lớp `Controller` để mô tả chi tiết hơn về chức năng của từng API, ý nghĩa tham số, các định dạng response và các lỗi có thể xảy ra.
-        *   **Cấu hình bảo mật**: Cấu hình `SecurityScheme` trong Springdoc để người dùng có thể thực hiện xác thực (gửi JWT) trực tiếp trên giao diện Swagger, giúp việc kiểm thử các API yêu cầu quyền truy cập trở nên dễ dàng.
-        *   **Tùy chỉnh giao diện**: Tùy chỉnh các thông tin chung của API trên Swagger UI (tiêu đề, mô tả, thông tin liên hệ) để tăng tính chuyên nghiệp.
-
-2.  **Viết Test tự động**:
-    *   **Vấn đề**: Thiếu test làm tăng rủi ro khi thay đổi code.
-    *   **Giải pháp**:
-        *   **Unit Test**: Sử dụng **JUnit 5** và **Mockito** để test logic trong các lớp `Service` một cách độc lập (mock các `Repository`).
-        *   **Integration Test**: Sử dụng **Testcontainers** để khởi tạo một database thật (trong Docker container) khi chạy test. Điều này cho phép kiểm tra sự tương tác từ `Controller` xuống đến CSDL một cách toàn diện.
-
-3.  **Tối ưu hóa Hiệu năng (Performance Tuning)**:
-    *   **Vấn đề**: Khi dữ liệu lớn, các truy vấn CSDL, đặc biệt là các join phức tạp, có thể trở nên chậm chạp.
-    *   **Giải pháp**:
-        *   **Caching**: Tích hợp **Redis** hoặc **Caffeine** để cache các dữ liệu ít thay đổi nhưng được truy cập thường xuyên (VD: danh sách Categories, thông tin các khóa học phổ biến).
-        *   **Phân trang (Pagination)**: Đã được áp dụng tốt, cần tiếp tục duy trì.
-        *   **Tối ưu truy vấn**: Sử dụng **JPA Entity Graphs** để giải quyết vấn đề N+1 select khi truy vấn các thực thể có quan hệ `@...ToMany`.
-
-4.  **Chuyển đổi sang Kiến trúc Clean/Hexagonal**:
-    *   **Vấn đề**: Hiện tại logic nghiệp vụ (`Service`) vẫn còn phụ thuộc trực tiếp vào Spring Data (`Repository`).
-    *   **Giải pháp**:
-        *   Tạo một tầng `domain` hoặc `usecase` ở giữa `Controller` và `Service`.
-        *   Định nghĩa các `interfaces` cho repository trong tầng `domain`.
-        *   Lớp `Service` (giờ đóng vai trò là tầng `infrastructure`) sẽ implement các interface này.
-        *   Điều này giúp logic nghiệp vụ cốt lõi hoàn toàn độc lập với framework, dễ dàng thay đổi CSDL hoặc các thành phần khác.
-
-5.  **Xử lý bất đồng bộ (Asynchronous Processing)**:
-    *   **Vấn đề**: Các tác vụ tốn thời gian như gửi email thông báo, xử lý video bài học... nếu được xử lý đồng bộ sẽ làm tăng thời gian phản hồi của API.
-    *   **Giải pháp**: Sử dụng **RabbitMQ** hoặc **Kafka**. Khi có một sự kiện (VD: học viên đăng ký), thay vì xử lý ngay, hệ thống sẽ đẩy một message vào queue. Một service khác (worker) sẽ lắng nghe và xử lý tác vụ đó một cách bất đồng bộ.
-
----
-
-### Phân tích Chi tiết các Luồng nghiệp vụ và Thiết kế API
-
-Phần này sẽ đi sâu vào các luồng nghiệp vụ cho từng vai trò người dùng, giải thích lý do đằng sau thiết kế API, đồng thời phân tích điểm mạnh, điểm yếu và đề xuất các cải tiến.
-
-#### 1. Người dùng không xác thực (Guest)
-
-Luồng nghiệp vụ của người dùng không xác thực tập trung vào việc khám phá và tìm hiểu các khóa học có sẵn trên nền tảng.
-
-**a. Luồng: Xem danh sách khóa học và thông tin giảng viên**
-
-*   **Luồng nghiệp vụ**:
-    1.  Người dùng truy cập trang web/ứng dụng.
-    2.  Hệ thống hiển thị danh sách các khóa học công khai, có thể kèm theo các khóa học nổi bật (`popular`) hoặc mới nhất.
-    3.  Người dùng có thể sử dụng bộ lọc (theo danh mục, giá tiền,...) để tìm kiếm khóa học phù hợp.
-    4.  Người dùng có thể xem thông tin chi tiết của một khóa học cụ thể.
-    5.  Người dùng cũng có thể xem danh sách các giảng viên và thông tin công khai của họ.
-
-*   **Thiết kế API và Lý do**:
-    *   `GET /courses/public`: Cung cấp danh sách khóa học đã được phân trang và cho phép lọc. Tên gọi `public` làm rõ đây là API không cần xác thực.
-    *   `GET /courses/public/{courseId}`: Lấy thông tin chi tiết của một khóa học. Sử dụng path variable (`{courseId}`) là một thiết kế RESTful chuẩn để định danh một tài nguyên cụ thể.
-    *   `GET /instructors/public`: Lấy danh sách giảng viên.
-    *   `GET /instructors/public/{instructorId}`: Xem hồ sơ công khai của giảng viên.
-    *   **Lý do chung**: Các API này sử dụng phương thức `GET` vì chúng chỉ dùng để truy xuất dữ liệu, không làm thay đổi trạng thái hệ thống. Việc tách riêng các endpoint `public` giúp quản lý bảo mật dễ dàng hơn ở tầng gateway hoặc Spring Security, cho phép các request này đi qua mà không cần kiểm tra JWT.
-
-*   **Điểm mạnh**:
-    *   API rõ ràng, dễ hiểu và tuân thủ các nguyên tắc REST.
-    *   Cung cấp đầy đủ các bộ lọc cần thiết để người dùng có thể tìm kiếm hiệu quả.
-
-*   **Điểm yếu và Hướng cải tiến**:
-    *   **Điểm yếu**: Hiện tại, API `GET /courses` và `GET /courses/public` có vẻ gọi cùng một logic. Nếu không có sự khác biệt về dữ liệu trả về cho người dùng đã đăng nhập và người dùng công khai, điều này có thể gây nhầm lẫn.
-    *   **Cải tiến**: Nếu có sự khác biệt, cần làm rõ trong logic của service. Ví dụ, `GET /courses` (cho người dùng đã đăng nhập) có thể trả về thêm thông tin về việc người dùng đã đăng ký khóa học này hay chưa. Nếu không, nên xem xét loại bỏ một trong hai để tránh trùng lặp.
-
-#### 2. Học viên (Student)
-
-Sau khi đăng ký và đăng nhập, học viên có các luồng nghiệp vụ liên quan đến việc tham gia và học tập.
-
-**a. Luồng: Ghi danh vào một khóa học**
-
-*   **Luồng nghiệp vụ**:
-    1.  Học viên chọn một khóa học và nhấn nút "Ghi danh".
-    2.  Hệ thống kiểm tra các điều kiện: học viên đã đăng nhập chưa, đã ghi danh vào khóa học này trước đó chưa, khóa học có yêu cầu phê duyệt không.
-    3.  Nếu hợp lệ, hệ thống tạo một bản ghi `Enrollment` mới, liên kết giữa học viên và khóa học.
-    4.  Hệ thống trả về thông báo ghi danh thành công.
-
-*   **Thiết kế API và Lý do**:
-    *   `POST /enrollments`: Đây là một thiết kế RESTful tốt. Thay vì coi việc ghi danh là một hành động trên `Course` (VD: `POST /courses/{id}/enroll`), hệ thống xem `Enrollment` (sự ghi danh) là một tài nguyên riêng biệt. Điều này giúp cho việc quản lý ghi danh (xem, hủy) trở nên rõ ràng hơn.
-
-*   **Điểm mạnh**:
-    *   Thiết kế API tài nguyên hóa (`resource-oriented`) giúp hệ thống dễ mở rộng.
-    *   Logic kiểm tra điều kiện trong service đảm bảo tính toàn vẹn dữ liệu.
-
-*   **Điểm yếu và Hướng cải tiến**:
-    *   **Điểm yếu**: API có thể yêu cầu client phải gửi toàn bộ đối tượng `Enrollment`. Điều này không an toàn và không hiệu quả.
-    *   **Cải tiến**: Nên sử dụng một `EnrollmentRequestDTO` chỉ chứa `courseId`. Thông tin `userId` nên được lấy từ `SecurityContextHolder` trong service để đảm bảo học viên chỉ có thể tự ghi danh cho chính mình.
-
-**b. Luồng: Theo dõi tiến độ và học bài**
-
-*   **Luồng nghiệp vụ**:
-    1.  Học viên vào trang "Khóa học của tôi".
-    2.  Hệ thống hiển thị danh sách các khóa học đã ghi danh.
-    3.  Khi vào một khóa học, hệ thống hiển thị danh sách các bài học và đánh dấu các bài đã hoàn thành.
-    4.  Khi học viên hoàn thành một bài học (VD: xem hết video, làm quiz), họ nhấn "Đánh dấu hoàn thành".
-    5.  Hệ thống cập nhật bản ghi `Progress`, liên kết với `Enrollment` và `Lesson`.
-
-*   **Thiết kế API và Lý do**:
-    *   `GET /courses/my`: Lấy danh sách khóa học của riêng người dùng đang đăng nhập. Tên gọi `my` rất trực quan.
-    *   `POST /progress`: Tạo hoặc cập nhật một bản ghi `Progress`. Client sẽ gửi `lessonId` và `enrollmentId`. Hệ thống sẽ đánh dấu bài học này là hoàn thành.
-
-*   **Điểm mạnh**:
-    *   Việc tách `Progress` ra một tài nguyên riêng giúp theo dõi chi tiết và linh hoạt.
-    *   Luồng logic rõ ràng, dễ dàng cho client tương tác.
-
-*   **Điểm yếu và Hướng cải tiến**:
-    *   **Cải tiến**: Cần có cơ chế xác thực mạnh mẽ trong service của `POST /progress` để đảm bảo một học viên không thể cập nhật tiến độ cho một `enrollment` không thuộc về mình.
-
-#### 3. Giảng viên (Instructor)
-
-Giảng viên chịu trách nhiệm tạo và quản lý nội dung khóa học.
-
-**a. Luồng: Tạo và quản lý khóa học**
-
-*   **Luồng nghiệp vụ**:
-    1.  Giảng viên truy cập vào trang quản lý khóa học.
-    2.  Nhấn "Tạo khóa học mới", điền các thông tin (tên, mô tả, danh mục,...) và tải lên ảnh thumbnail.
-    3.  Hệ thống nhận thông tin, xác thực quyền (`INSTRUCTOR`), kiểm tra tính hợp lệ của dữ liệu (VD: tên khóa học không trùng).
-    4.  Lưu thông tin khóa học và lưu file ảnh vào hệ thống lưu trữ.
-    5.  Tương tự với các hành động cập nhật, xóa khóa học. Hệ thống phải kiểm tra quyền sở hữu: chỉ giảng viên tạo ra khóa học (hoặc Admin) mới có quyền sửa/xóa.
-
-*   **Thiết kế API và Lý do**:
-    *   `POST /courses`, `PUT /courses/{courseId}`, `DELETE /courses/{courseId}`: Sử dụng các phương thức HTTP chuẩn (`POST`, `PUT`, `DELETE`) cho các hoạt động CRUD, đây là một thực hành tốt nhất của REST.
-    *   Sử dụng `@PreAuthorize("hasRole('INSTRUCTOR')")` ở tầng controller là một cách hiệu quả để phân quyền, chặn ngay các truy cập không hợp lệ.
-    *   API nhận `multipart/form-data` cho phép gửi cả dữ liệu JSON và file trong một request, rất tiện lợi.
-
-*   **Điểm mạnh**:
-    *   Phân quyền rõ ràng và bảo mật ở cấp độ API.
-    *   Kiểm tra quyền sở hữu trong service là một lớp bảo mật nghiệp vụ quan trọng, ngăn chặn giảng viên này sửa khóa học của giảng viên khác.
-    *   Xử lý file và dữ liệu trong cùng một giao dịch giúp đảm bảo tính nhất quán.
-
-*   **Điểm yếu và Hướng cải tiến**:
-    *   **Điểm yếu**: Endpoint `PATCH /{courseId}/toggle-status` để bật/tắt khóa học hiện tại không có annotation `@PreAuthorize`. Đây là một lỗ hổng bảo mật tiềm tàng, vì bất kỳ người dùng xác thực nào cũng có thể gọi nó.
-    *   **Cải tiến**: Bổ sung ngay `@PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")` cho endpoint này. Đồng thời, logic trong service cũng cần kiểm tra quyền sở hữu tương tự như khi xóa/sửa khóa học.
-
-#### 4. Quản trị viên (Admin)
-
-Admin có quyền cao nhất, quản lý toàn bộ hệ thống.
-
-**a. Luồng: Quản lý người dùng**
-
-*   **Luồng nghiệp vụ**:
-    1.  Admin vào trang quản lý người dùng.
-    2.  Hệ thống hiển thị danh sách người dùng với bộ lọc và phân trang.
-    3.  Admin có thể thực hiện các hành động: xem chi tiết, cập nhật thông tin, thay đổi mật khẩu, vô hiệu hóa/kích hoạt tài khoản, hoặc xóa người dùng.
-    4.  Hệ thống có logic để ngăn Admin tự xóa hoặc vô hiệu hóa chính tài khoản của mình.
-
-*   **Thiết kế API và Lý do**:
-    *   `GET, PUT, DELETE /admin/manage-users/{userId}`: Toàn bộ các API quản lý người dùng được nhóm dưới một đường dẫn chung `/admin/manage-users`, giúp việc áp dụng quy tắc bảo mật chung cho toàn bộ nhóm chức năng này trở nên đơn giản.
-    *   Việc Admin có thể thay đổi mật khẩu của người dùng khác (`/{userId}/change-password`) là một chức năng cần thiết cho việc hỗ trợ người dùng khi họ quên mật khẩu và không thể tự reset.
-
-*   **Điểm mạnh**:
-    *   Cung cấp bộ công cụ quản lý người dùng toàn diện cho Admin.
-    *   Có các biện pháp bảo vệ quan trọng (không cho phép tự khóa tài khoản).
-    *   Cấu trúc API được tổ chức tốt theo tài nguyên.
-
-*   **Điểm yếu và Hướng cải tiến**:
-    *   **Cải tiến**: Nên có một hệ thống ghi log (Audit Log) chi tiết. Mỗi khi Admin thực hiện một hành động quan trọng (thay đổi mật khẩu, xóa người dùng), hệ thống nên tự động ghi lại hành động đó (ai làm, làm gì, lúc nào) để phục vụ cho việc kiểm tra và truy vết sau này.
-
-**b. Luồng: Quản lý danh mục và bảo trì hệ thống**
-
-*   **Luồng nghiệp vụ**:
-    1.  Admin vào trang quản lý danh mục, có thể thêm, sửa, xóa các danh mục khóa học.
-    2.  Admin có thể cần thực hiện các tác vụ bảo trì, ví dụ như đồng bộ lại số bài học của tất cả các khóa học.
-
-*   **Thiết kế API và Lý do**:
-    *   `POST, PUT, DELETE /categories`: Các API CRUD cho danh mục, được bảo vệ bằng quyền Admin.
-    *   `POST /courses/admin/sync-all-total-lessons`: Đây là một API chuyên dụng cho tác vụ bảo trì. Đặt nó trong `CourseController` nhưng với tiền tố `/admin` và bảo vệ bằng `@PreAuthorize("hasRole('ADMIN')")` là một giải pháp hợp lý, giữ cho logic liên quan đến course nằm trong controller tương ứng.
-
-*   **Điểm mạnh**:
-    *   Tách biệt rõ ràng các chức năng chỉ dành cho Admin.
-    *   API cho các tác vụ bảo trì được thiết kế để không ảnh hưởng đến người dùng thông thường.
-
-*   **Điểm yếu và Hướng cải tiến**:
-    *   **Cải tiến**: Các tác vụ tốn nhiều thời gian như `sync-all-total-lessons` có thể làm block luồng xử lý chính nếu số lượng khóa học lớn. Nên xem xét chuyển chúng thành các tác vụ bất đồng bộ (asynchronous) bằng cách sử dụng `@Async` của Spring hoặc một hàng đợi tin nhắn (Message Queue) như RabbitMQ.
-
-### So sánh với các giải pháp hiện có và Đánh giá
-
-**Điểm mới và khác biệt so với các giải pháp tiêu chuẩn:**
-
-*   **Cơ chế xử lý JWT khi đăng xuất (`InvalidatedToken`)**: Nhiều hệ thống đơn giản chỉ dựa vào thời gian hết hạn của JWT. Việc triển khai một blacklist cho các token đã đăng xuất là một bước tiến về bảo mật, giúp vô hiệu hóa ngay lập-tức các token có thể đã bị lộ.
-*   **API bảo trì chuyên dụng (`sync-total-lessons`)**: Việc cung cấp các API để bảo trì và đồng bộ dữ liệu một cách chủ động cho thấy sự trưởng thành trong thiết kế, giải quyết các vấn đề về tính nhất quán dữ liệu có thể phát sinh trong quá trình hoạt động.
-*   **Kiểm tra quyền sở hữu ở tầng service**: Ngoài việc phân quyền bằng role ở controller, hệ thống còn cẩn thận kiểm tra "chủ sở hữu" của tài nguyên (VD: giảng viên chỉ được sửa khóa học của mình). Đây là một lớp logic nghiệp vụ quan trọng mà không phải hệ thống nào cũng triển khai kỹ lưỡng.
-
-**Những điểm chưa ổn hoặc cần cân nhắc:**
-
-*   **Thiếu Audit Log**: Như đã đề cập, việc thiếu một hệ thống ghi vết các hành động quan trọng của Admin là một thiếu sót lớn về mặt quản trị và an ninh.
-*   **Xử lý tác vụ dài hơi một cách đồng bộ**: Các tác vụ có khả năng chạy lâu (đồng bộ dữ liệu, xử lý file lớn) đang được xử lý đồng bộ, có thể ảnh hưởng đến hiệu năng và trải nghiệm người dùng. Đây là một điểm yếu phổ biến trong nhiều ứng dụng nhưng cần được khắc phục khi hệ thống phát triển lớn hơn.
-*   **Thiết kế DTO**: Ở một số nơi, có thể API vẫn còn chấp nhận các đối tượng Entity trực tiếp thay vì các DTO chuyên dụng (Request DTOs), điều này có thể dẫn đến các vấn đề về bảo mật (mass assignment vulnerability) và làm lộ cấu trúc bên trong của CSDL. Cần rà soát và đảm bảo tất cả các endpoint đều sử dụng DTO cho input.
-
-Nhìn chung, giải pháp hiện tại đã rất mạnh mẽ, an toàn và có cấu trúc tốt. Các điểm yếu chủ yếu là những vấn đề liên quan đến việc tối ưu hóa hiệu năng và hoàn thiện các tính năng ở quy mô lớn, vốn có thể được cải tiến trong các phiên bản tiếp theo. 
+Toàn bộ dự án này, từ khâu lên ý tưởng, phân tích, thiết kế đến triển khai, đều do một cá nhân thực hiện. Các đóng góp chính bao gồm:
+*   **Phân tích và Thiết kế:** Phân tích yêu cầu bài toán, thiết kế kiến trúc hệ thống tổng thể theo mô hình phân lớp, và thiết kế chi tiết cơ sở dữ liệu quan hệ.
+*   **Xây dựng Backend:**
+    *   Thiết lập và cấu hình dự án Spring Boot.
+    *   Triển khai toàn bộ hệ thống xác thực và phân quyền bằng Spring Security và JWT, bao gồm cả luồng đăng ký, đăng nhập, đăng xuất và phân quyền dựa trên vai trò.
+    *   Xây dựng đầy đủ các module nghiệp vụ cốt lõi: Quản lý người dùng, Khóa học, Bài học, Danh mục.
+    *   Phát triển hệ thống Quiz phức tạp với các chức năng tạo bài kiểm tra, câu hỏi, theo dõi lịch sử làm bài.
+    *   Triển khai các tính năng tương tác của học viên như đăng ký khóa học, theo dõi tiến độ, và đánh giá.
+    *   Xây dựng module quản lý và tải lên file.
+    *   Tạo các API thống kê và quản trị cho vai trò Admin.
+*   **Tối ưu hóa và Hoàn thiện:**
+    *   Áp dụng mẫu DTO và MapStruct để tối ưu hóa truyền tải dữ liệu và bảo mật cấu trúc entity.
+    *   Sử dụng JPA Specification để xây dựng các API tìm kiếm động, linh hoạt.
+    *   Xây dựng hệ thống xử lý lỗi tập trung và đồng bộ.
+    *   Tích hợp và cấu hình Swagger UI để tài liệu hóa API.
+*   **Quản lý Cơ sở dữ liệu:** Thiết kế và tạo lập CSDL bằng MySQL, đảm bảo các mối quan hệ và ràng buộc toàn vẹn dữ liệu.
+
+### Phân tích Chi tiết Cơ sở dữ liệu (từ `dump-identity-202506112234.sql`)
+
+Phần này sẽ đi sâu vào phân tích cấu trúc cơ sở dữ liệu được định nghĩa trong file `dump-identity-202506112234.sql`, bao gồm sơ đồ quan hệ và mô tả chi tiết từng bảng.
+
+#### Sơ đồ Quan hệ Thực thể (ERD)
+
+```mermaid
+erDiagram
+    user {
+        varchar(255) id PK
+        date dob
+        varchar(255) first_name
+        varchar(255) last_name
+        varchar(255) password
+        varchar(255) username
+        varchar(255) avatar_url
+        varchar(255) bio
+        datetime(6) created_at
+        varchar(255) email
+        bit(1) enabled
+        enum gender
+        varchar(255) phone
+        datetime(6) updated_at
+        int login_fail_count
+    }
+    role {
+        varchar(255) name PK
+        varchar(255) description
+    }
+    permission {
+        varchar(255) name PK
+        varchar(255) description
+    }
+    category {
+        varchar(255) id PK
+        varchar(500) description
+        varchar(255) name
+        varchar(255) created_by_id FK
+        datetime(6) created_at
+    }
+    course {
+        varchar(255) id PK
+        varchar(255) description
+        longtext detailed_description
+        date end_date
+        bit(1) is_active
+        date start_date
+        varchar(255) thumbnail_url
+        varchar(255) title
+        int total_lessons
+        varchar(255) instructor_id FK
+        varchar(255) category_id FK
+        datetime(6) created_at
+        datetime(6) updated_at
+        bit(1) requires_approval
+    }
+    lesson {
+        varchar(255) id PK
+        varchar(255) attachment_url
+        longtext content
+        datetime(6) created_at
+        varchar(255) title
+        datetime(6) updated_at
+        varchar(255) video_url
+        varchar(255) created_by_id FK
+        varchar(255) description
+    }
+    course_lesson {
+        varchar(255) id PK
+        bit(1) is_visible
+        int order_index
+        varchar(255) course_id FK
+        varchar(255) lesson_id FK
+        varchar(255) prerequisite_id FK
+    }
+    course_document {
+        varchar(255) id PK
+        varchar(255) content_type
+        varchar(255) description
+        varchar(255) file_name
+        bigint file_size
+        varchar(255) original_file_name
+        varchar(255) title
+        datetime(6) uploaded_at
+        varchar(255) course_id FK
+        varchar(255) uploaded_by FK
+    }
+    lesson_document {
+        varchar(255) id PK
+        varchar(255) content_type
+        varchar(255) description
+        varchar(255) file_name
+        bigint file_size
+        varchar(255) original_file_name
+        varchar(255) title
+        datetime(6) uploaded_at
+        varchar(255) lesson_id FK
+        varchar(255) uploaded_by FK
+    }
+    document_view {
+        varchar(255) id PK
+        varchar(255) unique_key
+        bigint view_duration_seconds
+        datetime(6) viewed_at
+        varchar(255) lesson_document_id FK
+        varchar(255) user_id FK
+    }
+    enrollment {
+        varchar(255) id PK
+        date completion_date
+        date enrollment_date
+        bit(1) is_completed
+        double progress
+        varchar(255) course_id FK
+        varchar(255) student_id FK
+        enum approval_status
+    }
+    course_review {
+        varchar(255) id PK
+        tinytext comment
+        bit(1) is_approved
+        int rating
+        date review_date
+        varchar(255) course_id FK
+        varchar(255) student_id FK
+        bit(1) is_rejected
+    }
+    progress {
+        varchar(255) id PK
+        date completion_date
+        bit(1) is_completed
+        varchar(255) enrollment_id FK
+        varchar(255) lesson_id FK
+        double quiz_score
+        varchar(255) completed_quiz_id FK
+    }
+    quiz {
+        varchar(255) id PK
+        datetime(6) created_at
+        varchar(255) description
+        datetime(6) end_time
+        bit(1) is_active
+        int max_attempts
+        double passing_score
+        enum scoring_method
+        bit(1) show_correct_answers
+        bit(1) show_results
+        bit(1) shuffle_answers
+        bit(1) shuffle_questions
+        datetime(6) start_time
+        int time_limit_minutes
+        varchar(255) title
+        enum type
+        datetime(6) updated_at
+        varchar(255) created_by FK
+        varchar(255) lesson_id FK
+    }
+    quiz_question {
+        varchar(255) id PK
+        datetime(6) created_at
+        tinytext explanation
+        int order_index
+        double points
+        tinytext question_text
+        datetime(6) updated_at
+        varchar(255) quiz_id FK
+    }
+    quiz_answer {
+        varchar(255) id PK
+        tinytext answer_text
+        datetime(6) created_at
+        bit(1) is_correct
+        int order_index
+        datetime(6) updated_at
+        varchar(255) question_id FK
+    }
+    quiz_attempt {
+        varchar(255) id PK
+        int attempt_number
+        datetime(6) completed_at
+        int correct_answers
+        int incorrect_answers
+        bit(1) is_passed
+        double percentage
+        double score
+        datetime(6) started_at
+        enum status
+        datetime(6) submitted_at
+        int total_questions
+        int unanswered_questions
+        varchar(255) quiz_id FK
+        varchar(255) student_id FK
+        varchar(255) enrollment_id FK
+    }
+    quiz_attempt_answer {
+        varchar(255) id PK
+        datetime(6) answered_at
+        bit(1) is_correct
+        double points_earned
+        varchar(255) attempt_id FK
+        varchar(255) question_id FK
+        varchar(255) selected_answer_id FK
+    }
+    uploaded_file {
+        varchar(255) id PK
+        varchar(255) content_type
+        varchar(255) file_name
+        bit(1) is_public
+        varchar(255) original_file_name
+        datetime(6) uploaded_at
+        varchar(255) course_id FK
+        varchar(255) uploaded_by_id FK
+        bigint file_size
+    }
+    user_roles {
+        varchar(255) user_id PK, FK
+        varchar(255) roles_name PK, FK
+    }
+    role_permissions {
+        varchar(255) role_name PK, FK
+        varchar(255) permissions_name PK, FK
+    }
+
+    user ||--o{ course : instructor_id
+    user ||--o{ category : created_by_id
+    user ||--o{ course_document : uploaded_by
+    user ||--o{ course_review : student_id
+    user ||--o{ document_view : user_id
+    user ||--o{ enrollment : student_id
+    user ||--o{ lesson : created_by_id
+    user ||--o{ lesson_document : uploaded_by
+    user ||--o{ quiz : created_by
+    user ||--o{ quiz_attempt : student_id
+    user ||--o{ uploaded_file : uploaded_by_id
+    user }|..|{ user_roles : " "
+
+    role }|..|{ user_roles : " "
+    role }|..|{ role_permissions : " "
+
+    permission }|..|{ role_permissions : " "
+
+    category ||--o{ course : category_id
+
+    course ||--o{ course_document : course_id
+    course ||--o{ course_lesson : course_id
+    course ||--o{ course_review : course_id
+    course ||--o{ enrollment : course_id
+    course ||--o{ uploaded_file : course_id
+
+    lesson ||--o{ course_lesson : lesson_id
+    lesson ||--o{ lesson_document : lesson_id
+    lesson ||--o{ progress : lesson_id
+    lesson ||--o{ quiz : lesson_id
+
+    course_lesson }|--o| course_lesson : prerequisite_id
+
+    lesson_document ||--o{ document_view : lesson_document_id
+
+    enrollment ||--o{ progress : enrollment_id
+    enrollment ||--o{ quiz_attempt : enrollment_id
+
+    quiz ||--o{ progress : completed_quiz_id
+    quiz ||--o{ quiz_question : quiz_id
+    quiz ||--o{ quiz_attempt : quiz_id
+
+    quiz_question ||--o{ quiz_answer : question_id
+    quiz_question ||--o{ quiz_attempt_answer : question_id
+
+    quiz_answer ||--o{ quiz_attempt_answer : selected_answer_id
+
+    quiz_attempt ||--o{ quiz_attempt_answer : attempt_id
+```
+
+
+### 5. Phân tích và Thiết kế Hệ thống
+
+Phần này đi sâu vào thiết kế kiến trúc và cấu trúc chi tiết của hệ thống, bao gồm Sơ đồ Quan hệ Thực thể (ERD) để mô tả cơ sở dữ liệu, Sơ đồ Gói (Package Diagram) để thể hiện cấu trúc mã nguồn, và các Sơ đồ Lớp (Class Diagram) để minh họa chi tiết các thành phần chính.
+
+#### 5.1. Sơ đồ Quan hệ Thực thể (ERD)
+
+Sơ đồ ERD dưới đây mô tả cấu trúc logic của cơ sở dữ liệu. Nó bao gồm tất cả các bảng, các thuộc tính của chúng và các mối quan hệ (một-một, một-nhiều, nhiều-nhiều) giữa chúng. Sơ đồ này là kim chỉ nam cho việc xây dựng tầng truy cập dữ liệu (repository) và đảm bảo tính toàn vẹn, nhất quán của dữ liệu trong toàn hệ thống.
+
+*   **Các thực thể chính:** `user`, `role`, `course`, `lesson`, `enrollment`, `quiz`, `progress`.
+*   **Các mối quan hệ:** Thể hiện rõ ràng qua các đường nối và ký hiệu (ví dụ: `||--o{` thể hiện quan hệ một-nhiều).
+*   **Chi tiết:** Mỗi thực thể đều có các thuộc tính được định nghĩa rõ ràng với kiểu dữ liệu và các ràng buộc khóa (PK - Primary Key, FK - Foreign Key).
+
+```mermaid
+erDiagram
+    user {
+        varchar(255) id PK
+        date dob
+        varchar(255) first_name
+        varchar(255) last_name
+        varchar(255) password
+        varchar(255) username
+        varchar(255) avatar_url
+        varchar(255) bio
+        datetime(6) created_at
+        varchar(255) email
+        bit(1) enabled
+        enum gender
+        varchar(255) phone
+        datetime(6) updated_at
+        int login_fail_count
+    }
+    role {
+        varchar(255) name PK
+        varchar(255) description
+    }
+    permission {
+        varchar(255) name PK
+        varchar(255) description
+    }
+    category {
+        varchar(255) id PK
+        varchar(500) description
+        varchar(255) name
+        varchar(255) created_by_id FK
+        datetime(6) created_at
+    }
+    course {
+        varchar(255) id PK
+        varchar(255) description
+        longtext detailed_description
+        date end_date
+        bit(1) is_active
+        date start_date
+        varchar(255) thumbnail_url
+        varchar(255) title
+        int total_lessons
+        varchar(255) instructor_id FK
+        varchar(255) category_id FK
+        datetime(6) created_at
+        datetime(6) updated_at
+        bit(1) requires_approval
+    }
+    lesson {
+        varchar(255) id PK
+        varchar(255) attachment_url
+        longtext content
+        datetime(6) created_at
+        varchar(255) title
+        datetime(6) updated_at
+        varchar(255) video_url
+        varchar(255) created_by_id FK
+        varchar(255) description
+    }
+    course_lesson {
+        varchar(255) id PK
+        bit(1) is_visible
+        int order_index
+        varchar(255) course_id FK
+        varchar(255) lesson_id FK
+        varchar(255) prerequisite_id FK
+    }
+    course_document {
+        varchar(255) id PK
+        varchar(255) content_type
+        varchar(255) description
+        varchar(255) file_name
+        bigint file_size
+        varchar(255) original_file_name
+        varchar(255) title
+        datetime(6) uploaded_at
+        varchar(255) course_id FK
+        varchar(255) uploaded_by FK
+    }
+    lesson_document {
+        varchar(255) id PK
+        varchar(255) content_type
+        varchar(255) description
+        varchar(255) file_name
+        bigint file_size
+        varchar(255) original_file_name
+        varchar(255) title
+        datetime(6) uploaded_at
+        varchar(255) lesson_id FK
+        varchar(255) uploaded_by FK
+    }
+    document_view {
+        varchar(255) id PK
+        varchar(255) unique_key
+        bigint view_duration_seconds
+        datetime(6) viewed_at
+        varchar(255) lesson_document_id FK
+        varchar(255) user_id FK
+    }
+    enrollment {
+        varchar(255) id PK
+        date completion_date
+        date enrollment_date
+        bit(1) is_completed
+        double progress
+        varchar(255) course_id FK
+        varchar(255) student_id FK
+        enum approval_status
+    }
+    course_review {
+        varchar(255) id PK
+        tinytext comment
+        bit(1) is_approved
+        int rating
+        date review_date
+        varchar(255) course_id FK
+        varchar(255) student_id FK
+        bit(1) is_rejected
+    }
+    progress {
+        varchar(255) id PK
+        date completion_date
+        bit(1) is_completed
+        varchar(255) enrollment_id FK
+        varchar(255) lesson_id FK
+        double quiz_score
+        varchar(255) completed_quiz_id FK
+    }
+    quiz {
+        varchar(255) id PK
+        datetime(6) created_at
+        varchar(255) description
+        datetime(6) end_time
+        bit(1) is_active
+        int max_attempts
+        double passing_score
+        enum scoring_method
+        bit(1) show_correct_answers
+        bit(1) show_results
+        bit(1) shuffle_answers
+        bit(1) shuffle_questions
+        datetime(6) start_time
+        int time_limit_minutes
+        varchar(255) title
+        enum type
+        datetime(6) updated_at
+        varchar(255) created_by FK
+        varchar(255) lesson_id FK
+    }
+    quiz_question {
+        varchar(255) id PK
+        datetime(6) created_at
+        tinytext explanation
+        int order_index
+        double points
+        tinytext question_text
+        datetime(6) updated_at
+        varchar(255) quiz_id FK
+    }
+    quiz_answer {
+        varchar(255) id PK
+        tinytext answer_text
+        datetime(6) created_at
+        bit(1) is_correct
+        int order_index
+        datetime(6) updated_at
+        varchar(255) question_id FK
+    }
+    quiz_attempt {
+        varchar(255) id PK
+        int attempt_number
+        datetime(6) completed_at
+        int correct_answers
+        int incorrect_answers
+        bit(1) is_passed
+        double percentage
+        double score
+        datetime(6) started_at
+        enum status
+        datetime(6) submitted_at
+        int total_questions
+        int unanswered_questions
+        varchar(255) quiz_id FK
+        varchar(255) student_id FK
+        varchar(255) enrollment_id FK
+    }
+    quiz_attempt_answer {
+        varchar(255) id PK
+        datetime(6) answered_at
+        bit(1) is_correct
+        double points_earned
+        varchar(255) attempt_id FK
+        varchar(255) question_id FK
+        varchar(255) selected_answer_id FK
+    }
+    uploaded_file {
+        varchar(255) id PK
+        varchar(255) content_type
+        varchar(255) file_name
+        bit(1) is_public
+        varchar(255) original_file_name
+        datetime(6) uploaded_at
+        varchar(255) course_id FK
+        varchar(255) uploaded_by_id FK
+        bigint file_size
+    }
+    user_roles {
+        varchar(255) user_id PK, FK
+        varchar(255) roles_name PK, FK
+    }
+    role_permissions {
+        varchar(255) role_name PK, FK
+        varchar(255) permissions_name PK, FK
+    }
+
+    user ||--o{ course : instructor_id
+    user ||--o{ category : created_by_id
+    user ||--o{ course_document : uploaded_by
+    user ||--o{ course_review : student_id
+    user ||--o{ document_view : user_id
+    user ||--o{ enrollment : student_id
+    user ||--o{ lesson : created_by_id
+    user ||--o{ lesson_document : uploaded_by
+    user ||--o{ quiz : created_by
+    user ||--o{ quiz_attempt : student_id
+    user ||--o{ uploaded_file : uploaded_by_id
+    user }|..|{ user_roles : " "
+
+    role }|..|{ user_roles : " "
+    role }|..|{ role_permissions : " "
+
+    permission }|..|{ role_permissions : " "
+
+    category ||--o{ course : category_id
+
+    course ||--o{ course_document : course_id
+    course ||--o{ course_lesson : course_id
+    course ||--o{ course_review : course_id
+    course ||--o{ enrollment : course_id
+    course ||--o{ uploaded_file : course_id
+
+    lesson ||--o{ course_lesson : lesson_id
+    lesson ||--o{ lesson_document : lesson_id
+    lesson ||--o{ progress : lesson_id
+    lesson ||--o{ quiz : lesson_id
+
+    course_lesson }|--o| course_lesson : prerequisite_id
+
+    lesson_document ||--o{ document_view : lesson_document_id
+
+    enrollment ||--o{ progress : enrollment_id
+    enrollment ||--o{ quiz_attempt : enrollment_id
+
+    quiz ||--o{ progress : completed_quiz_id
+    quiz ||--o{ quiz_question : quiz_id
+    quiz ||--o{ quiz_attempt : quiz_id
+
+    quiz_question ||--o{ quiz_answer : question_id
+    quiz_question ||--o{ quiz_attempt_answer : question_id
+
+    quiz_answer ||--o{ quiz_attempt_answer : selected_answer_id
+
+    quiz_attempt ||--o{ quiz_attempt_answer : attempt_id
+```
+
+#### 5.2. Sơ đồ các Gói (Package Diagram)
+
+Sơ đồ gói mô tả cách các lớp được nhóm lại với nhau và mối quan hệ phụ thuộc giữa các gói. Hệ thống tuân thủ kiến trúc phân lớp rõ ràng, giúp tách biệt các mối quan tâm (Separation of Concerns) và tăng khả năng bảo trì.
+
+*   `controller`: Tiếp nhận request và trả về response. Phụ thuộc vào `service` và `dto`.
+*   `service`: Chứa logic nghiệp vụ chính. Phụ thuộc vào `repository`, `entity`, `mapper`, và `dto`.
+*   `repository`: Chịu trách nhiệm truy cập dữ liệu. Phụ thuộc vào `entity`.
+*   `entity`: Đại diện cho các bảng trong CSDL.
+*   `dto`: Các đối tượng truyền dữ liệu, giúp che giấu cấu trúc `entity`.
+*   `mapper`: Tự động ánh xạ giữa `entity` và `dto`.
+*   `configuration`: Chứa các lớp cấu hình cho ứng dụng (ví dụ: Spring Security).
+*   `exception`: Định nghĩa các lớp ngoại lệ tùy chỉnh và xử lý lỗi toàn cục.
+*   `specification`: Hỗ trợ tạo các truy vấn động bằng JPA Specification.
+*   `interceptor`: Chứa các interceptor xử lý các request đến.
+*   `security`: (Trong báo cáo này, các lớp liên quan đến security nằm trong gói `configuration`).
+
+```plantuml
+@startuml
+title Sơ đồ Gói của Hệ thống (Đã cập nhật)
+
+package "com.ntabodoiqua.online_course_management" {
+  [OnlineCourseManagementApplication]
+  
+  package "controller" {
+  }
+  
+  package "service" {
+    package "impl" {}
+    package "file" {}
+    package "quiz" {}
+    package "enrollment" {}
+  }
+  
+  package "repository" {
+  }
+  
+  package "entity" {
+  }
+  
+  package "dto" {
+  }
+  
+  package "mapper" {
+  }
+  
+  package "specification" {
+  }
+  
+  package "configuration" {
+    ' Classes like SecurityConfig, JwtAuthenticationEntryPoint are here
+  }
+
+  package "exception" {
+  }
+  
+  package "enums" {
+  }
+  
+  package "validator" {
+  }
+  
+  package "constant" {
+  }
+
+  package "interceptor" {
+  }
+}
+
+' Dependencies
+controller ..> service
+controller ..> dto
+
+service ..> repository
+service ..> entity
+service ..> mapper
+service ..> dto
+service ..> exception
+service ..> specification
+
+repository ..> entity
+mapper ..> dto
+mapper ..> entity
+specification ..> entity
+
+' Security related dependencies are within configuration
+configuration ..> service
+configuration ..> exception
+
+[OnlineCourseManagementApplication] ..> controller
+
+@enduml
+```
+
+#### 5.3. Sơ đồ Lớp (Class Diagram)
+
+Các sơ đồ lớp dưới đây sẽ minh họa chi tiết hơn về cấu trúc của các thành phần quan trọng trong hệ thống.
+
+##### 5.3.1. Sơ đồ Lớp Domain chính
+
+Sơ đồ này tập trung vào các thực thể (Entity) cốt lõi và mối quan hệ giữa chúng, cho thấy "bộ xương" của dữ liệu mà hệ thống quản lý.
+
+```plantuml
+@startuml
+title Sơ đồ Lớp Domain Chính
+
+class User {
+  -id: String
+  -username: String
+  -email: String
+  -password: String
+  -firstName: String
+  -lastName: String
+  -roles: Set<Role>
+}
+
+class Role {
+  -name: String
+  -permissions: Set<Permission>
+}
+
+class Permission {
+  -name: String
+}
+
+class Course {
+  -id: String
+  -title: String
+  -description: String
+  -instructor: User
+  -category: Category
+  -lessons: List<CourseLesson>
+}
+
+class Category {
+  -id: String
+  -name: String
+}
+
+class Lesson {
+  -id: String
+  -title: String
+  -content: String
+}
+
+class CourseLesson {
+  -orderIndex: int
+  -isVisible: boolean
+}
+
+class Enrollment {
+  -id: String
+  -student: User
+  -course: Course
+  -enrollmentDate: Date
+  -isCompleted: boolean
+  -progress: double
+}
+
+class Progress {
+  -id: String
+  -enrollment: Enrollment
+  -lesson: Lesson
+  -isCompleted: boolean
+}
+
+User "1" -- "0..*" Enrollment : "là học viên của"
+User "1" -- "0..*" Course : "là giảng viên của"
+Course "1" -- "0..*" Enrollment : "có các lượt ghi danh"
+Course "1" -- "1" Category
+Course "1" -- "0..*" CourseLesson
+Lesson "1" -- "0..*" CourseLesson
+Enrollment "1" -- "0..*" Progress
+Lesson "1" -- "1" Progress
+
+User "1" -- "1..*" Role
+Role "1" -- "0..*" Permission
+@enduml
+```
+
+##### 5.3.2. Sơ đồ Lớp cho Module Quản lý Khóa học
+
+Sơ đồ này mô tả chi tiết luồng xử lý của chức năng quản lý khóa học, thể hiện rõ kiến trúc phân lớp.
+
+```plantuml
+@startuml
+title Sơ đồ Lớp - Module Quản lý Khóa học
+
+interface CourseRepository <<Repository>> {
+  +findAll(spec: Specification<Course>, pageable: Pageable): Page<Course>
+  +findById(id: String): Optional<Course>
+  +save(course: Course): Course
+}
+
+interface CourseService <<Service>> {
+  +createCourse(request: CourseCreateRequest, thumbnail: MultipartFile): CourseResponse
+  +getCourseById(courseId: String): CourseResponse
+  +updateCourse(courseId: String, request: CourseUpdateRequest): CourseResponse
+}
+
+class CourseServiceImpl implements CourseService {
+  -courseRepository: CourseRepository
+  -courseMapper: CourseMapper
+  -fileStorageService: FileStorageService
+  +createCourse(...)
+  +getCourseById(...)
+  +updateCourse(...)
+}
+
+class CourseController <<Controller>> {
+  -courseService: CourseService
+  +createCourse(...): ApiResponse<CourseResponse>
+  +getCourseById(...): ApiResponse<CourseResponse>
+  +updateCourse(...): ApiResponse<CourseResponse>
+}
+
+class Course {
+  -id: String
+  -title: String
+}
+
+class CourseResponse <<DTO>> {
+  +id: String
+  +title: String
+}
+
+class CourseCreateRequest <<DTO>> {
+  +title: String
+}
+
+interface CourseMapper <<Mapper>> {
+  +toCourseResponse(course: Course): CourseResponse
+  +toCourse(request: CourseCreateRequest): Course
+}
+
+CourseController --> CourseService
+CourseServiceImpl --> CourseRepository
+CourseServiceImpl --> CourseMapper
+CourseServiceImpl --> Course
+CourseMapper --> Course
+CourseMapper --> CourseResponse
+CourseMapper --> CourseCreateRequest
+@enduml
+```
+
+##### 5.3.3. Sơ đồ Lớp cho Module Quiz
+
+Module Quiz có độ phức tạp cao, sơ đồ lớp dưới đây sẽ làm rõ cấu trúc và mối quan hệ của các thành phần trong nó.
+
+```plantuml
+@startuml
+title Sơ đồ Lớp - Module Quiz
+
+class Quiz {
+  -id: String
+  -title: String
+  -timeLimitMinutes: int
+  -lesson: Lesson
+  -questions: List<QuizQuestion>
+}
+
+class QuizQuestion {
+  -id: String
+  -questionText: String
+  -orderIndex: int
+  -quiz: Quiz
+  -answers: List<QuizAnswer>
+}
+
+class QuizAnswer {
+  -id: String
+  -answerText: String
+  -isCorrect: boolean
+  -question: QuizQuestion
+}
+
+class QuizAttempt {
+  -id: String
+  -student: User
+  -quiz: Quiz
+  -startedAt: Date
+  -submittedAt: Date
+  -score: double
+  -status: AttemptStatus
+  -answers: List<QuizAttemptAnswer>
+}
+
+class QuizAttemptAnswer {
+  -id: String
+  -attempt: QuizAttempt
+  -question: QuizQuestion
+  -selectedAnswer: QuizAnswer
+}
+
+class QuizAttemptService <<Service>> {
+  +startAttempt(quizId: String, courseId: String): QuizAttemptResponse
+  +submitAttempt(attemptId: String, answers: List<AnswerSubmission>): QuizResultResponse
+}
+
+Quiz "1" -- "1..*" QuizQuestion
+QuizQuestion "1" -- "1..*" QuizAnswer
+Quiz "1" -- "0..*" QuizAttempt
+User "1" -- "0..*" QuizAttempt
+
+QuizAttempt "1" -- "1..*" QuizAttemptAnswer
+QuizQuestion "1" -- "1" QuizAttemptAnswer
+QuizAnswer "1" -- "0..*" QuizAttemptAnswer
+
+QuizAttemptService --> Quiz
+QuizAttemptService --> QuizAttempt
+QuizAttemptService --> QuizAttemptAnswer
+@enduml
+```
+
+#### 4.10. Nghiệp vụ Khám phá & Ghi danh Khóa học (Student)
+
+*   **Tổng quan:** Cung cấp cho học viên khả năng tìm kiếm, duyệt qua danh sách các khóa học có sẵn và thực hiện ghi danh để bắt đầu quá trình học tập.
+    *   **Mô tả:** Học viên truy cập hệ thống, xem danh sách các khóa học đang hoạt động (`active`). Sau khi chọn một khóa học, họ xem thông tin chi tiết và quyết định ghi danh.
+    *   **Sơ đồ tuần tự:**
+        ```plantuml
+        @startuml
+        actor Student
+        boundary "CourseController" as CourseBoundary
+        boundary "EnrollmentController" as EnrollBoundary
+        control "CourseService" as CourseControl
+        control "EnrollmentService" as EnrollControl
+
+        activate Student
+        Student -> CourseBoundary: GET /courses/public\n(filter, pageable)
+        activate CourseBoundary
+
+        CourseBoundary -> CourseControl: getCourses(filter, pageable)
+        note right of CourseControl: Chỉ trả về các khóa học\nđang hoạt động (active)
+        activate CourseControl
+        CourseControl --> CourseBoundary: Page<CourseResponse>
+        deactivate CourseControl
+        
+        CourseBoundary --> Student: ApiResponse(courseList)
+        deactivate CourseBoundary
+
+        Student -> EnrollBoundary: POST /enrollments/courses/{courseId}
+        activate EnrollBoundary
+        
+        EnrollBoundary -> EnrollControl: enroll(courseId)
+        activate EnrollControl
+        EnrollControl --> EnrollBoundary: "Enrollment successful"
+        deactivate EnrollControl
+        
+        EnrollBoundary --> Student: ApiResponse(message)
+        deactivate EnrollBoundary
+        deactivate Student
+        @enduml
+        ```
+
+### 6. Kết quả thực hiện
+
+**Kết quả chương trình**
+
+Hệ thống backend đã hoàn thành và cung cấp một bộ RESTful API đầy đủ, sẵn sàng cho việc tích hợp với một ứng dụng frontend để tạo thành một nền tảng quản lý khóa học trực tuyến hoàn chỉnh.
+
+*   **Các chức năng đã triển khai:**
+    *   **Xác thực và phân quyền:** Quản lý toàn diện người dùng, vai trò, quyền hạn. Cung cấp API đăng nhập, đăng ký, đăng xuất (vô hiệu hóa token), và lấy thông tin người dùng hiện tại. Phân quyền chi tiết trên từng API cho 3 vai trò: `STUDENT`, `INSTRUCTOR`, `ADMIN`.
+    *   **Quản lý Khóa học và Danh mục:** CRUD (Tạo, Đọc, Cập nhật, Xóa) cho `Category`, `Course`, `Lesson`, và quản lý liên kết giữa bài học và khóa học (`CourseLesson`).
+    *   **Quản lý Nội dung:** Tải lên và quản lý tài liệu cho khóa học (`CourseDocumentController`) và bài học (`LessonDocumentController`).
+    *   **Hệ thống Quiz:** Tạo và quản lý `Quiz` với nhiều tùy chọn (thời gian, số lần thử, v.v.), câu hỏi (`QuizQuestion`), và câu trả lời (`QuizAnswer`).
+    *   **Tương tác của Học viên:**
+        *   Đăng ký/ghi danh vào khóa học (`EnrollmentController`).
+        *   Thực hiện bài kiểm tra (`QuizAttemptController`).
+        *   Theo dõi tiến độ học tập (`ProgressController`).
+        *   Đánh giá và xem đánh giá khóa học (`CourseReviewController`).
+        *   Theo dõi lượt xem tài liệu (`DocumentViewController`).
+    *   **Chức năng cho Giảng viên:** Cung cấp các API riêng để quản lý các khóa học, học viên của mình (`InstructorController`).
+    *   **Chức năng cho Quản trị viên:** Cung cấp API thống kê tổng quan (số lượng người dùng, khóa học, doanh thu, v.v.) và quản lý toàn bộ tài nguyên hệ thống (`AdminController`, `StatisticController`).
+    *   **Tìm kiếm và Lọc động:** Cung cấp API tìm kiếm/lọc động cho người dùng và khóa học với nhiều tiêu chí kết hợp.
+
+**Phân tích các kết quả thu được**
+
+*   Hệ thống đáp ứng đầy đủ và chính xác các yêu cầu chức năng của bài toán đã đề ra, từ quản lý cơ bản đến các luồng nghiệp vụ phức tạp như quiz và theo dõi tiến độ.
+*   Cấu trúc phân lớp rõ ràng và việc áp dụng các design pattern tốt (DTO, Specification, Mapper) giúp mã nguồn sạch sẽ, dễ hiểu, dễ bảo trì và mở rộng.
+*   Hệ thống bảo mật chặt chẽ, sử dụng Spring Security và JWT với cơ chế phân quyền `@PreAuthorize`, đảm bảo chỉ những người dùng có thẩm quyền mới có thể truy cập tài nguyên tương ứng.
+*   Swagger UI cung cấp một giao diện trực quan để kiểm thử và khám phá toàn bộ các API đã xây dựng, giúp đẩy nhanh quá trình phát triển và tích hợp với frontend.
+*   Việc sử dụng JPA Specification đã tạo ra các API tìm kiếm rất mạnh mẽ và linh hoạt, giảm thiểu việc phải viết nhiều phương thức truy vấn khác nhau ở backend.
+
+### 7. Kết luận
+
+**Hiệu quả đạt được và các điểm tồn tại**
+
+*   **Hiệu quả:**
+    *   Xây dựng thành công một backend hoàn chỉnh, có cấu trúc tốt, bảo mật và khả năng mở rộng cao.
+    *   Mã nguồn có chất lượng tốt, tuân thủ các thông lệ tốt nhất trong phát triển phần mềm với Spring Boot.
+    *   Hệ thống ổn định, logic nghiệp vụ được đóng gói rõ ràng trong các service, sẵn sàng để tích hợp và đưa vào sử dụng.
+
+*   **Điểm tồn tại và hướng phát triển:**
+    *   **Thiếu kiểm thử tự động:** Dự án hiện thiếu các bài test (Unit Test cho `Service`, Integration Test cho `Controller`). Việc bổ sung test là bước đi quan trọng tiếp theo để đảm bảo chất lượng, sự ổn định của hệ thống khi có sự thay đổi hoặc thêm mới chức năng trong tương lai.
+    *   **Làm giàu tài liệu API:** Mặc dù đã có Swagger UI, cần bổ sung các annotation như `@Operation`, `@ApiResponse`, `@Parameter` trong mã nguồn của `Controller` để tài liệu API trở nên chi tiết, rõ ràng và thân thiện hơn với người dùng (ví dụ: lập trình viên frontend).
+    *   **Tối ưu hóa hiệu năng:** Với lượng dữ liệu lớn, cần xem xét việc đánh index cho các cột thường xuyên được truy vấn trong CSDL (ví dụ: các khóa ngoại, các trường dùng để lọc). Ngoài ra, có thể áp dụng Caching (ví dụ: Redis) cho các dữ liệu ít thay đổi như danh mục, thông tin vai trò/quyền hạn để giảm tải cho database.
+    *   **CI/CD:** Xây dựng quy trình Tích hợp và Triển khai liên tục (CI/CD) sử dụng các công cụ như Jenkins, GitLab CI/CD hoặc GitHub Actions để tự động hóa việc build, test và deploy ứng dụng mỗi khi có thay đổi, giúp quy trình phát triển nhanh và đáng tin cậy hơn.
+
+*   **Điểm tồn tại và hướng phát triển:**
+    *   **Thiếu kiểm thử tự động:** Dự án hiện thiếu các bài test (Unit Test cho `Service`, Integration Test cho `Controller`). Việc bổ sung test là bước đi quan trọng tiếp theo để đảm bảo chất lượng, sự ổn định của hệ thống khi có sự thay đổi hoặc thêm mới chức năng trong tương lai.
+    *   **Làm giàu tài liệu API:** Mặc dù đã có Swagger UI, cần bổ sung các annotation như `@Operation`, `@ApiResponse`, `@Parameter` trong mã nguồn của `Controller` để tài liệu API trở nên chi tiết, rõ ràng và thân thiện hơn với người dùng (ví dụ: lập trình viên frontend).
+    *   **Tối ưu hóa hiệu năng:** Với lượng dữ liệu lớn, cần xem xét việc đánh index cho các cột thường xuyên được truy vấn trong CSDL (ví dụ: các khóa ngoại, các trường dùng để lọc). Ngoài ra, có thể áp dụng Caching (ví dụ: Redis) cho các dữ liệu ít thay đổi như danh mục, thông tin vai trò/quyền hạn để giảm tải cho database.
+    *   **CI/CD:** Xây dựng quy trình Tích hợp và Triển khai liên tục (CI/CD) sử dụng các công cụ như Jenkins, GitLab CI/CD hoặc GitHub Actions để tự động hóa việc build, test và deploy ứng dụng mỗi khi có thay đổi, giúp quy trình phát triển nhanh và đáng tin cậy hơn.
+
+*   **Điểm tồn tại và hướng phát triển:**
+    *   **Thiếu kiểm thử tự động:** Dự án hiện thiếu các bài test (Unit Test cho `Service`, Integration Test cho `Controller`). Việc bổ sung test là bước đi quan trọng tiếp theo để đảm bảo chất lượng, sự ổn định của hệ thống khi có sự thay đổi hoặc thêm mới chức năng trong tương lai.
+    *   **Làm giàu tài liệu API:** Mặc dù đã có Swagger UI, cần bổ sung các annotation như `@Operation`, `@ApiResponse`, `@Parameter` trong mã nguồn của `Controller` để tài liệu API trở nên chi tiết, rõ ràng và thân thiện hơn với người dùng (ví dụ: lập trình viên frontend).
+    *   **Tối ưu hóa hiệu năng:** Với lượng dữ liệu lớn, cần xem xét việc đánh index cho các cột thường xuyên được truy vấn trong CSDL (ví dụ: các khóa ngoại, các trường dùng để lọc). Ngoài ra, có thể áp dụng Caching (ví dụ: Redis) cho các dữ liệu ít thay đổi như danh mục, thông tin vai trò/quyền hạn để giảm tải cho database.
+    *   **CI/CD:** Xây dựng quy trình Tích hợp và Triển khai liên tục (CI/CD) sử dụng các công cụ như Jenkins, GitLab CI/CD hoặc GitHub Actions để tự động hóa việc build, test và deploy ứng dụng mỗi khi có thay đổi, giúp quy trình phát triển nhanh và đáng tin cậy hơn.
+
+*   **Điểm tồn tại và hướng phát triển:**
+    *   **Thiếu kiểm thử tự động:** Dự án hiện thiếu các bài test (Unit Test cho `Service`, Integration Test cho `Controller`). Việc bổ sung test là bước đi quan trọng tiếp theo để đảm bảo chất lượng, sự ổn định của hệ thống khi có sự thay đổi hoặc thêm mới chức năng trong tương lai.
+    *   **Làm giàu tài liệu API:** Mặc dù đã có Swagger UI, cần bổ sung các annotation như `@Operation`, `@ApiResponse`, `@Parameter` trong mã nguồn của `Controller` để tài liệu API trở nên chi tiết, rõ ràng và thân thiện hơn với người dùng (ví dụ: lập trình viên frontend).
+    *   **Tối ưu hóa hiệu năng:** Với lượng dữ liệu lớn, cần xem xét việc đánh index cho các cột thường xuyên được truy vấn trong CSDL (ví dụ: các khóa ngoại, các trường dùng để lọc). Ngoài ra, có thể áp dụng Caching (ví dụ: Redis) cho các dữ liệu ít thay đổi như danh mục, thông tin vai trò/quyền hạn để giảm tải cho database.
+    *   **CI/CD:** Xây dựng quy trình Tích hợp và Triển khai liên tục (CI/CD) sử dụng các công cụ như Jenkins, GitLab CI/CD hoặc GitHub Actions để tự động hóa việc build, test và deploy ứng dụng mỗi khi có thay đổi, giúp quy trình phát triển nhanh và đáng tin cậy hơn.
+
+*   **Quản lý Cơ sở dữ liệu:** Thiết kế và tạo lập CSDL bằng MySQL, đảm bảo các mối quan hệ và ràng buộc toàn vẹn dữ liệu.
+
+### Phân tích Chi tiết Cơ sở dữ liệu (từ `dump-identity-202506112234.sql`)
+
+Phần này sẽ đi sâu vào phân tích cấu trúc cơ sở dữ liệu được định nghĩa trong file `dump-identity-202506112234.sql`, bao gồm sơ đồ quan hệ và mô tả chi tiết từng bảng.
+
+*   **Sơ đồ Quan hệ Thực thể (ERD):** Sơ đồ ERD dưới đây mô tả cấu trúc logic của cơ sở dữ liệu. Nó bao gồm tất cả các bảng, các thuộc tính của chúng và các mối quan hệ (một-một, một-nhiều, nhiều-nhiều) giữa chúng. Sơ đồ này là kim chỉ nam cho việc xây dựng tầng truy cập dữ liệu (repository) và đảm bảo tính toàn vẹn, nhất quán của dữ liệu trong toàn hệ thống.
+*   **Sơ đồ các Gói (Package Diagram):** Sơ đồ gói mô tả cách các lớp được nhóm lại với nhau và mối quan hệ phụ thuộc giữa các gói. Hệ thống tuân thủ kiến trúc phân lớp rõ ràng, giúp tách biệt các mối quan tâm (Separation of Concerns) và tăng khả năng bảo trì.
+*   **Sơ đồ Lớp (Class Diagram):** Các sơ đồ lớp dưới đây sẽ minh họa chi tiết hơn về cấu trúc của các thành phần quan trọng trong hệ thống.
+
+</rewritten_file> 
