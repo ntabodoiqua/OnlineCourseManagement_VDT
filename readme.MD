@@ -33,7 +33,7 @@ Hệ thống áp dụng kiến trúc phân lớp (Layered Architecture) rõ ràn
 *   **Framework:** Spring Boot 3
 *   **ORM:** Spring Data JPA / Hibernate
 *   **Bảo mật:** Spring Security, JSON Web Token (JWT)
-*   **Database:** MySQL (theo cấu hình mặc định)
+*   **Database:** MySQL
 *   **Build Tool:** Maven
 
 ## Hướng dẫn cài đặt
@@ -87,7 +87,6 @@ Hệ thống cung cấp một bộ RESTful API đầy đủ cho các hoạt đ�
 
 ## Đề xuất cải tiến trong tương lai
 
-*   **Tích hợp Swagger/OpenAPI:** Để tự động hóa việc tạo tài liệu và kiểm thử API.
 *   **Viết Test tự động:** Xây dựng Unit Test và Integration Test để đảm bảo chất lượng code.
 *   **Tối ưu hóa hiệu năng:** Sử dụng Caching (Redis/Caffeine) và tối ưu các câu truy vấn CSDL.
 *   **Xử lý bất đồng bộ:** Sử dụng Message Queue (RabbitMQ/Kafka) cho các tác vụ tốn thời gian.
