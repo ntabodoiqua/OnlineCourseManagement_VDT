@@ -33,7 +33,7 @@ Hệ thống áp dụng kiến trúc phân lớp (Layered Architecture) rõ ràn
 *   **Framework:** Spring Boot 3
 *   **ORM:** Spring Data JPA / Hibernate
 *   **Bảo mật:** Spring Security, JSON Web Token (JWT)
-*   **Database:** MySQL (theo cấu hình mặc định)
+*   **Database:** MySQL
 *   **Build Tool:** Maven
 
 ## Hướng dẫn cài đặt
