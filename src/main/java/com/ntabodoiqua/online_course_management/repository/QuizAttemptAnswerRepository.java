@@ -56,9 +56,12 @@ public interface QuizAttemptAnswerRepository extends JpaRepository<QuizAttemptAn
     List<QuizAttemptAnswer> findByAttemptIdAndSelectedAnswerIsNull(String attemptId);
     long countByAttemptIdAndSelectedAnswerIsNull(String attemptId);
     
-    // Note: Removed unsafe deleteByAttemptId and deleteByQuestionId methods.
-    // These methods can cause data integrity issues by removing student attempt history.
-    // Entity lifecycle should be managed through cascading from parent entities.
+    /**
+     * Xóa tất cả các câu trả lời trong các lần thử (attempt answers) liên quan đến một câu hỏi cụ thể.
+     * Phương thức này được dùng khi một câu hỏi bị xóa.
+     * @param questionId ID của câu hỏi.
+     */
+    void deleteByQuestionId(String questionId);
     
     // Thống kê theo quiz
     @Query("SELECT qaa FROM QuizAttemptAnswer qaa WHERE qaa.attempt.quiz.id = :quizId")

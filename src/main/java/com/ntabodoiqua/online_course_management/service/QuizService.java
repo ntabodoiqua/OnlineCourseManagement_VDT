@@ -384,8 +384,8 @@ public class QuizService {
     
     /**
      * Xóa quiz
-     * Chỉ creator hoặc admin mới có thể xóa
-     * Không thể xóa nếu đã có attempts
+     * Chỉ creator hoặc admin mới có thể xóa.
+     * Khi xóa quiz, mọi attempt liên quan cũng sẽ bị xóa.
      */
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
     @Transactional
@@ -398,11 +398,9 @@ public class QuizService {
         // Check permission
         checkQuizPermission(quiz);
         
-        // Check if quiz has any attempts
-        long attemptCount = quizAttemptRepository.countByQuizId(quizId);
-        if (attemptCount > 0) {
-            throw new AppException(ErrorCode.QUIZ_HAS_ATTEMPTS_CANNOT_DELETE);
-        }
+        // Xóa tất cả các attempt liên quan đến quiz này.
+        // Điều này giả định rằng việc xóa QuizAttempt sẽ xóa theo tầng (cascade) các QuizAttemptAnswer.
+        quizAttemptRepository.deleteByQuizId(quizId);
         
         quizRepository.deleteById(quizId);
         log.info("Quiz deleted successfully: {}", quizId);
@@ -525,6 +523,7 @@ public class QuizService {
     
     /**
      * Xóa câu hỏi
+     * Khi xóa câu hỏi, mọi câu trả lời trong các attempt cũng sẽ bị xóa.
      */
     @PreAuthorize("hasRole('INSTRUCTOR') or hasRole('ADMIN')")
     @Transactional
@@ -536,11 +535,8 @@ public class QuizService {
         
         checkQuizPermission(question.getQuiz());
         
-        // Check if question has been answered in any attempts
-        List<QuizAttemptAnswer> attemptAnswers = quizAttemptAnswerRepository.findByQuestionId(questionId);
-        if (!attemptAnswers.isEmpty()) {
-            throw new AppException(ErrorCode.QUESTION_HAS_ATTEMPTS_CANNOT_DELETE);
-        }
+        // Xóa tất cả các câu trả lời trong các lần thử (attempts) cho câu hỏi này.
+        quizAttemptAnswerRepository.deleteByQuestionId(questionId);
         
         quizQuestionRepository.deleteById(questionId);
         log.info("Question deleted successfully");
