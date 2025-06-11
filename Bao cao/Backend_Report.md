@@ -85,8 +85,8 @@ Giải pháp được xây dựng dựa trên Spring Boot, một framework mạn
     *   **Framework:** Spring Boot 3
     *   **ORM:** Spring Data JPA / Hibernate
     *   **Bảo mật:** Spring Security, JSON Web Token (JWT)
-    *   **API Documentation:** (Dự kiến) Swagger/OpenAPI (cần kiểm tra trong `pom.xml` hoặc `build.gradle` để xác nhận)
-    *   **Database:** (Dự kiến) MySQL/PostgreSQL (dựa trên cấu hình trong `application.properties`)
+    *   **API Documentation:** Swagger/OpenAPI (thông qua `springdoc-openapi`) đã được tích hợp. Giao diện Swagger UI có sẵn để khám phá, tài liệu hóa và kiểm thử API một cách trực quan.
+    *   **Database:** MySQL (dựa trên `pom.xml`)
 
 2.  **Luồng hoạt động chính:**
     *   **Đăng ký/Đăng nhập:** `AuthenticationController` -> `AuthenticationService` -> `UserRepository` -> JWT được tạo và trả về.
@@ -122,8 +122,8 @@ Hệ thống backend đã hoàn thành và cung cấp một bộ RESTful API đ�
     *   Mã nguồn được tổ chức tốt, dễ đọc và dễ tiếp cận.
 
 *   **Điểm tồn tại:**
-    *   Thiếu vắng hệ thống test tự động.
-    *   Cần cấu hình Swagger UI để việc kiểm thử và tài liệu hóa API được thuận tiện hơn.
+    *   Thiếu vắng hệ thống test tự động (Unit Test, Integration Test).
+    *   Cần làm giàu tài liệu API trên Swagger UI bằng các annotations chi tiết (`@Operation`, `@ApiResponse`...).
     *   Có thể tối ưu hóa một số câu truy vấn CSDL để cải thiện hiệu năng khi dữ liệu lớn.
 
 **Nêu rõ đóng góp của cá nhân**
@@ -207,9 +207,12 @@ Dựa trên yêu cầu ban đầu, dự án không chỉ hoàn thành mà còn p
 
 #### 4. Đề xuất Giải pháp Cải tiến trong Tương lai
 
-1.  **Tích hợp Swagger/OpenAPI**:
-    *   **Vấn đề**: Hiện tại, việc khám phá và test API phải thực hiện thủ công.
-    *   **Giải pháp**: Thêm dependency `springdoc-openapi-ui`. Spring Boot sẽ tự động tạo ra một giao diện Swagger UI tại `/swagger-ui.html`, cung cấp tài liệu API trực quan và một môi trường để test API trực tiếp.
+1.  **Hoàn thiện và Tận dụng Swagger/OpenAPI**:
+    *   **Tình trạng**: Hệ thống đã tích hợp `springdoc-openapi-ui`, giúp tự động tạo tài liệu API và giao diện tương tác tại `/swagger-ui.html`.
+    *   **Giải pháp cải tiến**:
+        *   **Làm giàu tài liệu**: Bổ sung các annotation của Swagger (`@Operation`, `@Parameter`, `@ApiResponse`, `@SecurityRequirement`...) vào các lớp `Controller` để mô tả chi tiết hơn về chức năng của từng API, ý nghĩa tham số, các định dạng response và các lỗi có thể xảy ra.
+        *   **Cấu hình bảo mật**: Cấu hình `SecurityScheme` trong Springdoc để người dùng có thể thực hiện xác thực (gửi JWT) trực tiếp trên giao diện Swagger, giúp việc kiểm thử các API yêu cầu quyền truy cập trở nên dễ dàng.
+        *   **Tùy chỉnh giao diện**: Tùy chỉnh các thông tin chung của API trên Swagger UI (tiêu đề, mô tả, thông tin liên hệ) để tăng tính chuyên nghiệp.
 
 2.  **Viết Test tự động**:
     *   **Vấn đề**: Thiếu test làm tăng rủi ro khi thay đổi code.
